@@ -7,17 +7,14 @@
 @slug = article-slug
 @commentId = 123
 
-###
-GET {{url}}
-
 ### Register
 POST {{api}}/users
 
 {
     "user": {
-        "email":"{{email}}",
-        "password":"{{password}}",
-        "username":"{{username}}"
+        "email": "{{email}}",
+        "password": "{{password}}",
+        "username": "{{username}}"
     }
 }
 
@@ -33,7 +30,13 @@ POST {{api}}/users/login
 
 ### Login and Remember Token
 POST {{api}}/users/login
-{"user":{"email":"{{email}}", "password":"{{password}}"}}
+
+{
+    "user": {
+        "email": "{{email}}",
+        "password": "{{password}}"
+    }
+}
 
 ### Current User
 GET {{api}}/user
@@ -43,7 +46,11 @@ Authorization: Token {{token}}
 PUT {{api}}/user
 Authorization: Token {{token}}
 
-{"user":{"email":"{{email}}"}}
+{
+    "user": {
+        "email": "{{email}}"
+    }
+}
 
 ### All Articles
 GET {{api}}/articles
@@ -61,7 +68,14 @@ GET {{api}}/articles?tag=dragons
 POST {{api}}/articles
 Authorization: Token {{token}}
 
-{"article":{"title":"How to train your dragon", "description":"Ever wonder how?", "body":"Very carefully.", "tagList":["training", "dragons"]}}
+{
+    "article": {
+        "title": "How to train your dragon",
+        "description": "Ever wonder how?",
+        "body": "Very carefully.",
+        "tagList": ["training", "dragons"]
+    }
+}
 
 ### Feed
 GET {{api}}/articles/feed
@@ -83,7 +97,11 @@ Authorization: Token {{token}}
 PUT {{api}}/articles/{{slug}}
 Authorization: Token {{token}}
 
-{"article":{"body":"With two hands"}}
+{
+    "article": {
+        "body": "With two hands"
+    }
+}
 
 ### Favorite Article
 POST {{api}}/articles/{{slug}}/favorite
@@ -101,7 +119,11 @@ Authorization: Token {{token}}
 POST {{api}}/articles/{{slug}}/comments
 Authorization: Token {{token}}
 
-{"comment":{"body":"Thank you so much!"}}
+{
+    "comment": {
+        "body": "Thank you so much!"
+    }
+}
 
 ### All Comments for Article
 GET {{api}}/articles/{{slug}}/comments
@@ -118,23 +140,22 @@ Authorization: Token {{token}}
 DELETE {{api}}/articles/{{slug}}
 Authorization: Token {{token}}
 
-### Register Celeb
-POST {{api}}/users
-
-{"user":{"email":"celeb_{{email}}", "password":"{{password}}", "username":"celeb_{{username}}"}}
-
 ### Profile
-GET {{api}}/profiles/celeb_{{username}}
+GET {{api}}/profiles/{{username}}
 Authorization: Token {{token}}
 
 ### Follow Profile
-POST {{api}}/profiles/celeb_{{username}}/follow
+POST {{api}}/profiles/{{username}}/follow
 Authorization: Token {{token}}
 
-{"user":{"email":"{{email}}"}}
+{
+    "user": {
+        "email": "{{email}}"
+    }
+}
 
 ### Unfollow Profile
-DELETE {{api}}/profiles/celeb_{{username}}/follow
+DELETE {{api}}/profiles/{{username}}/follow
 Authorization: Token {{token}}
 
 ### All Tags

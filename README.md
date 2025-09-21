@@ -18,9 +18,7 @@ For more information on how to this works with other frontends/backends, head ov
 
 > docker compose up
 
-## Concepts:
-
-## APIs:
+## [Endpoints](https://docs.realworld.show/specifications/backend/endpoints/)
 
 ```http
      # Auth
@@ -32,11 +30,12 @@ PUT    /user
        # Article, Favorite, Comments
 POST   /articles
 GET    /articles
-GET    /articles/feed # prevent article with title 'feed'
-GET    /articles?author={username}
-GET    /articles?favorited={username}
-GET    /articles?tag={tag1,tag2}
-
+                ?tag={tag1,tag2}
+                &author={username}
+                &favorited={username}
+                &limit={limit}
+                &offset={offset}
+GET    /articles/feed
 GET    /articles/{slug}
 PUT    /articles/{slug}
 DELETE /articles/{slug}
@@ -47,25 +46,28 @@ GET    /articles/{slug}/comments
 DELETE /articles/{slug}/comments/{commentId}
 
        # Profiles
-POST   /users/celeb
-GET    /profiles/celeb_{username}
-POST   /profiles/celeb_{username}/follow
-DELETE /profiles/celeb_{username}/follow
+GET    /profiles/{username}
+POST   /profiles/{username}/follow
+DELETE /profiles/{username}/follow
 
        # Tags
 GET    /tags
 ```
 
-## Database:
+## [API Response Format](https://docs.realworld.show/specifications/backend/api-response-format/)
+
+## Database
 
 ```txt
-- Users:
+- Users
        - id
        - role
 idx    - email     - unique
        - password
        - is_active
 ```
+
+## Concepts
 
 ## Todo
 
@@ -103,25 +105,25 @@ Shutdown DB Container
 make docker-down
 ```
 
-DB Integrations Test:
+DB Integrations Test
 
 ```bash
 make itest
 ```
 
-Live reload the application:
+Live reload the application
 
 ```bash
 make watch
 ```
 
-Run the test suite:
+Run the test suite
 
 ```bash
 make test
 ```
 
-Clean up binary from the last build:
+Clean up binary from the last build
 
 ```bash
 make clean
