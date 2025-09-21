@@ -56,15 +56,48 @@ GET    /tags
 
 ## [API Response Format](https://docs.realworld.show/specifications/backend/api-response-format/)
 
-## Database
+## Database (NoSQL features are not allowed, even though PostgreSQL has them)
 
 ```txt
 - Users
        - id
-       - role
 idx    - email     - unique
+idx    - username  - unique
        - password
-       - is_active
+       - image
+       - bio
+       - updated_at
+       - created_at
+- Articles
+       - id
+       - author_id
+idx    - slug      - unique
+       - body
+       - title
+       - description
+       - updated_at
+       - created_at
+- Comments
+       - id
+       - articleid
+       - authorid
+       - body
+       - created_at
+- Tags
+       - id
+idx    - name      - unique
+       - created_at
+- Favorites
+       - userid
+       - articleid
+       - created_at
+- Follows
+       - followerid
+       - followingid
+       - created_at
+- ArticleTags
+       - articleid
+       - tagid
 ```
 
 ## Concepts
