@@ -39,14 +39,14 @@ GET {{api}}/users/all
 
 ###
 GET {{api}}/auth/me
-Authorization: Bearer {{token_user}}
+Authorization: Token {{token_user}}
 
 ###
 GET {{api}}/users/{{id_user}}
 
 ###
 PATCH {{api}}/users/{{id_user}}
-Authorization: Bearer {{token_user}}
+Authorization: Token {{token_user}}
 
 {
     "email": "asd1@gmail.com",
@@ -55,7 +55,7 @@ Authorization: Bearer {{token_user}}
 
 ###
 PATCH {{api}}/users/{{id_user}}/status
-Authorization: Bearer {{token_admin}}
+Authorization: Token {{token_admin}}
 
 {
     "is_active": true
@@ -63,7 +63,7 @@ Authorization: Bearer {{token_admin}}
 
 ###
 PATCH {{api}}/users/{{id-user}}/password
-Authorization: Bearer {{token_user}}
+Authorization: Token {{token_user}}
 
 {
     "old_password": "Bruh0!0!",
@@ -72,4 +72,4 @@ Authorization: Bearer {{token_user}}
 
 ###
 DELETE {{api}}/users/{{id_user}}
-Authorization: Bearer {{token_admin}}
+Authorization: Token {{token_admin}}

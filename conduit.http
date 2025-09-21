@@ -1,0 +1,141 @@
+@url = http://localhost:9999
+@api = {{url}}/api
+@email = minhhoccode111@gmail.com
+@password = Bruh0!0!
+@username = minhhoccode111
+@token = your_token_here
+@slug = article-slug
+@commentId = 123
+
+###
+GET {{url}}
+
+### Register
+POST {{api}}/users
+
+{
+    "user": {
+        "email":"{{email}}",
+        "password":"{{password}}",
+        "username":"{{username}}"
+    }
+}
+
+### Login
+POST {{api}}/users/login
+
+{
+    "user": {
+        "email":"{{email}}",
+        "password":"{{password}}",
+    }
+}
+
+### Login and Remember Token
+POST {{api}}/users/login
+{"user":{"email":"{{email}}", "password":"{{password}}"}}
+
+### Current User
+GET {{api}}/user
+Authorization: Token {{token}}
+
+### Update User
+PUT {{api}}/user
+Authorization: Token {{token}}
+
+{"user":{"email":"{{email}}"}}
+
+### All Articles
+GET {{api}}/articles
+
+### Articles by Author
+GET {{api}}/articles?author=johnjacob
+
+### Articles Favorited by Username
+GET {{api}}/articles?favorited={{username}}
+
+### Articles by Tag
+GET {{api}}/articles?tag=dragons
+
+### Create Article
+POST {{api}}/articles
+Authorization: Token {{token}}
+
+{"article":{"title":"How to train your dragon", "description":"Ever wonder how?", "body":"Very carefully.", "tagList":["training", "dragons"]}}
+
+### Feed
+GET {{api}}/articles/feed
+Authorization: Token {{token}}
+
+### All Articles with auth
+GET {{api}}/articles
+Authorization: Token {{token}}
+
+### Articles by Author with auth
+GET {{api}}/articles?author={{username}}
+Authorization: Token {{token}}
+
+### Single Article by slug
+GET {{api}}/articles/{{slug}}
+Authorization: Token {{token}}
+
+### Update Article
+PUT {{api}}/articles/{{slug}}
+Authorization: Token {{token}}
+
+{"article":{"body":"With two hands"}}
+
+### Favorite Article
+POST {{api}}/articles/{{slug}}/favorite
+Authorization: Token {{token}}
+
+### Articles Favorited by Username with auth
+GET {{api}}/articles?favorited={{username}}
+Authorization: Token {{token}}
+
+### Unfavorite Article
+DELETE {{api}}/articles/{{slug}}/favorite
+Authorization: Token {{token}}
+
+### Create Comment for Article
+POST {{api}}/articles/{{slug}}/comments
+Authorization: Token {{token}}
+
+{"comment":{"body":"Thank you so much!"}}
+
+### All Comments for Article
+GET {{api}}/articles/{{slug}}/comments
+Authorization: Token {{token}}
+
+### All Comments for Article without login
+GET {{api}}/articles/{{slug}}/comments
+
+### Delete Comment for Article
+DELETE {{api}}/articles/{{slug}}/comments/{{commentId}}
+Authorization: Token {{token}}
+
+### Delete Article
+DELETE {{api}}/articles/{{slug}}
+Authorization: Token {{token}}
+
+### Register Celeb
+POST {{api}}/users
+
+{"user":{"email":"celeb_{{email}}", "password":"{{password}}", "username":"celeb_{{username}}"}}
+
+### Profile
+GET {{api}}/profiles/celeb_{{username}}
+Authorization: Token {{token}}
+
+### Follow Profile
+POST {{api}}/profiles/celeb_{{username}}/follow
+Authorization: Token {{token}}
+
+{"user":{"email":"{{email}}"}}
+
+### Unfollow Profile
+DELETE {{api}}/profiles/celeb_{{username}}/follow
+Authorization: Token {{token}}
+
+### All Tags
+GET {{api}}/tags

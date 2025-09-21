@@ -1,64 +1,59 @@
-# Go Web Authentication and Authorization
+# ![RealWorld Example App](logo.png)
 
-I built this solution from scratch
-[here](https://github.com/minhhoccode111/go-practice/tree/main/web/auth) as a
-foundation for my future projects.
+> ### Golang codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
 
-**NOTE**: The code is rough, buggy, and not production-ready—use at your own
-risk.
+### [Demo](https://demo.realworld.build/)&nbsp;&nbsp;&nbsp;&nbsp;[RealWorld](https://github.com/gothinkster/realworld)
+
+This codebase was created to demonstrate a fully fledged fullstack application built with **Golang** including CRUD operations, authentication, routing, pagination, and more.
+
+We've gone to great lengths to adhere to the **Golang** community styleguides & best practices.
+
+For more information on how to this works with other frontends/backends, head over to the [RealWorld](https://github.com/gothinkster/realworld) repo.
+
+## How it works
+
+> Describe the general architecture of your app here
+
+## Getting started
+
+> docker compose up
 
 ## Concepts:
 
-- Router
-- Filter
-- Interface
-- Middleware
-- Pagination
-- Soft-delete
-- Authorization
-- Authentication
-- Use `PATCH` verb
-- Database indexes
-- Password hashing
-- Database migration
-- Input validation + sanitization
-- Context for database query and middleware
-- Concurrency for independent database query (get all users, count users)
-- Use pointer for boolean to differentiate between "not provided" and
-  "explicitly false" in Go
-
-## Features:
-
-- Basic authentication and authorization
-- CRUD operations
-
 ## APIs:
 
-```txt
-       # public
-POST   /auth/register
-POST   /auth/login
-GET    /users/all
-       - filter email, status
-       - pagination
-       - TODO: only admin can get all users including inactive
-GET    /users/{id}
+```http
+     # Auth
+POST   /users
+POST   /users/login
+GET    /user
+PUT    /user
 
-       # auth
-PATCH  /users/{id}
-       - user update their profile, like email, bio, etc.
-PATCH  /users/{id}/password
-       - user update their password, must provide old password
-PATCH  /users/{id}/status
-       - user deactivate her account (soft-delete)
-       - only admin can activate an account
+       # Article, Favorite, Comments
+POST   /articles
+GET    /articles
+GET    /articles/feed # prevent article with title 'feed'
+GET    /articles?author={username}
+GET    /articles?favorited={username}
+GET    /articles?tag={tag1,tag2}
 
-       # authz
-DELETE /users/{id}
-       - admin hard-delete an account
-       # TODO
-PATCH  /users/{id}/role
-       - admin change other user's role to admin
+GET    /articles/{slug}
+PUT    /articles/{slug}
+DELETE /articles/{slug}
+POST   /articles/{slug}/favorite
+DELETE /articles/{slug}/favorite
+POST   /articles/{slug}/comments
+GET    /articles/{slug}/comments
+DELETE /articles/{slug}/comments/{commentId}
+
+       # Profiles
+POST   /users/celeb
+GET    /profiles/celeb_{username}
+POST   /profiles/celeb_{username}/follow
+DELETE /profiles/celeb_{username}/follow
+
+       # Tags
+GET    /tags
 ```
 
 ## Database:
@@ -74,8 +69,7 @@ idx    - email     - unique
 
 ## Todo
 
-- [ ] Add `PATCH  /users/{id}/role`: admin change other user's role to admin
-- [ ] Add unit tests
+- [ ] Add tests
 
 ## MakeFile
 

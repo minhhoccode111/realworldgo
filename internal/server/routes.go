@@ -137,12 +137,20 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		parts := strings.Fields(authHeader)
-		if !strings.EqualFold(parts[0], "Bearer") {
-			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "authorization header must start with 'Bearer'"})
+		if !strings.EqualFold(parts[0], "Token") {
+			WriteJSON(
+				w,
+				http.StatusUnauthorized,
+				JSON{"error": "authorization header must start with 'Token'"},
+			)
 			return
 		}
 		if len(parts) != 2 {
-			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "authorization header must be formatted as 'Bearer <token>'"})
+			WriteJSON(
+				w,
+				http.StatusUnauthorized,
+				JSON{"error": "authorization header must be formatted as 'Token <token>'"},
+			)
 			return
 		}
 		tokenStr := parts[1]
@@ -460,7 +468,11 @@ func (s *Server) StatusUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// deactivate
 		if userIdToken != userIdPath {
-			WriteJSON(w, http.StatusForbidden, JSON{"error": "you must be admin to deactivate other users than yourself"})
+			WriteJSON(
+				w,
+				http.StatusForbidden,
+				JSON{"error": "you must be admin to deactivate other users than yourself"},
+			)
 			return
 		}
 		// fine to continue
@@ -509,7 +521,11 @@ func (s *Server) PasswordUserHandler(w http.ResponseWriter, r *http.Request) {
 	err = s.db.UpdateUserPassword(r.Context(), userIdPath, newPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "user to be updated password not found"})
+			WriteJSON(
+				w,
+				http.StatusUnauthorized,
+				JSON{"error": "user to be updated password not found"},
+			)
 			return
 		}
 		log.Printf("Error: %v", err)
