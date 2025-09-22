@@ -66,8 +66,8 @@ idx    - username  - unique
        - password
        - image
        - bio
-       - updated_at
        - created_at
+       - updated_at
 - Articles
        - id
        - author_id
@@ -75,8 +75,8 @@ idx    - slug      - unique
        - body
        - title
        - description
-       - updated_at
        - created_at
+       - updated_at
        - deleted_at
 - Comments
        - id

@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	// to access without a qualifier
 	"auth/internal/model"
 	"auth/internal/utils"
 
