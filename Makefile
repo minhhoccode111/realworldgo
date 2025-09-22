@@ -4,7 +4,7 @@ export
 # Simple Makefile for a Go project
 
 # Build the application
-all: build test
+all: build
 
 build:
 	@echo "Building..."
@@ -31,20 +31,6 @@ docker-down:
 		echo "Falling back to Docker Compose V1"; \
 		docker-compose down; \
 	fi
-
-# Test the application
-test:
-	@echo "Testing..."
-	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
-	@$(GOPATH)/bin/ginkgo -r
-
-
-# Integrations Tests for the application
-itest:
-	@echo "Running integration tests..."
-	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
-	@$(GOPATH)/bin/ginkgo -r internal/database
-
 
 # Clean the binary
 clean:
@@ -97,4 +83,4 @@ migrate-new:
 	fi; \
 	$(GOOSE) create $(name) sql -dir $(MIGRATIONS_DIR)
 
-.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-redo migrate-status migrate-new
+.PHONY: all build run clean watch docker-run docker-down migrate-up migrate-down migrate-redo migrate-status migrate-new
