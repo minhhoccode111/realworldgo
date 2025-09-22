@@ -77,28 +77,33 @@ idx    - slug      - unique
        - description
        - updated_at
        - created_at
+       - deleted_at
 - Comments
        - id
-       - articleid
-       - authorid
+       - article_id
+       - author_id
        - body
        - created_at
+       - deleted_at
+- ArticleTags
+       - article_id
+       - tag_id
 - Tags
        - id
 idx    - name      - unique
-       - created_at
 - Favorites
-       - userid
-       - articleid
-       - created_at
+       - user_id
+       - article_id
 - Follows
-       - followerid
-       - followingid
-       - created_at
-- ArticleTags
-       - articleid
-       - tagid
+       - follower_id
+       - following_id
 ```
+
+- User vs. Article: One-to-Many
+- Article vs. Comment: One-to-Many
+- Article vs. Tag: Many-to-Many
+- Follow User vs. User: Many-to-Many
+- Favorite User vs. Article: Many-to-Many
 
 ## Concepts
 
