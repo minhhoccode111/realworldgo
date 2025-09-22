@@ -12,7 +12,19 @@ For more information on how to this works with other frontends/backends, head ov
 
 ## How it works
 
-> Describe the general architecture of your app here
+> I try to use Clean Architecture as much as I can.
+
+```txt
+internal/
+├── app/                 # Application layer (dependency injection)
+├── handlers/            # HTTP handlers (thin layer)
+├── services/            # Business logic layer
+├── repositories/        # Data access layer
+├── models/              # Domain models
+├── middleware/          # HTTP middleware
+├── utils/               # Utility functions
+└── config/              # Configuration
+```
 
 ## Getting started
 
