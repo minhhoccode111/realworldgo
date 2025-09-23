@@ -2,16 +2,23 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"auth/internal/model"
+	"auth/internal/utils"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/coder/websocket"
 )
@@ -57,29 +64,28 @@ func (s *Server) RegisterRoutes() http.Handler {
 func (s *Server) registerV1Routes(r *mux.Router) {
 	// Public routes
 	r.HandleFunc("/websocket", s.websocketHandler)
-	// r.HandleFunc("/github.com/minhhoccode111/realworldgo/register", s.RegisterHandler).
-	// Methods("POST")
-	// r.HandleFunc("/github.com/minhhoccode111/realworldgo/login", s.LoginHandler).Methods("POST")
+	r.HandleFunc("/auth/register", s.RegisterHandler).Methods("POST")
+	r.HandleFunc("/auth/login", s.LoginHandler).Methods("POST")
 	// WARN: must define '/all' before '/{id}'
-	// r.HandleFunc("/users/all", s.GetAllUsersHandler).Methods("GET")
-	// r.HandleFunc("/users/{id}", s.GetUserHandler).Methods("GET")
+	r.HandleFunc("/users/all", s.GetAllUsersHandler).Methods("GET")
+	r.HandleFunc("/users/{id}", s.GetUserHandler).Methods("GET")
 
 	// User-authenticated routes
 	me := r.PathPrefix("/auth").Subrouter()
 	me.Use(s.authMiddleware)
-	// me.HandleFunc("/me", s.GetMeHandler).Methods("GET")
+	me.HandleFunc("/me", s.GetMeHandler).Methods("GET")
 	user := r.PathPrefix("/users").Subrouter()
 	user.Use(s.authMiddleware)
-	// user.HandleFunc("/{id}", s.UpdateUserHandler).Methods("PATCH")
-	// user.HandleFunc("/{id}/password", s.PasswordUserHandler).Methods("PATCH")
+	user.HandleFunc("/{id}", s.UpdateUserHandler).Methods("PATCH")
+	user.HandleFunc("/{id}/password", s.PasswordUserHandler).Methods("PATCH")
 	// WARN: user can deactivate their account but only admin can activate an account
-	// user.HandleFunc("/{id}/status", s.StatusUserHandler).Methods("PATCH")
+	user.HandleFunc("/{id}/status", s.StatusUserHandler).Methods("PATCH")
 
 	// Admin-authorized routes
 	admin := r.PathPrefix("/users").Subrouter()
 	admin.Use(s.authMiddleware)
-	// admin.Use(s.adminMiddleware)
-	// admin.HandleFunc("/{id}", s.DeleteUserHandler).Methods("DELETE")
+	admin.Use(s.adminMiddleware)
+	admin.HandleFunc("/{id}", s.DeleteUserHandler).Methods("DELETE")
 }
 
 // timeout middleware use context
@@ -169,7 +175,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		// pass context to database query
-		// user, err := s.db.SelectUserById(r.Context(), userId)
+		user, err := s.db.SelectUserById(r.Context(), userId)
 		if err != nil {
 			log.Printf("Error selecting user by id: %v", err)
 			if strings.Contains(err.Error(), "timeout") {
@@ -179,26 +185,26 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 			return
 		}
-		// if !user.IsActive {
-		// 	WriteJSON(w, http.StatusForbidden, JSON{"error": "user in jwt is inactive"})
-		// 	return
-		// }
-		// ctx := context.WithValue(r.Context(), ctxUserKey, *user)
-		// next.ServeHTTP(w, r.WithContext(ctx))
+		if !user.IsActive {
+			WriteJSON(w, http.StatusForbidden, JSON{"error": "user in jwt is inactive"})
+			return
+		}
+		ctx := context.WithValue(r.Context(), ctxUserKey, *user)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 // Authorization middleware
-// func (s *Server) adminMiddleware(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		user := r.Context().Value(ctxUserKey).(models.User)
-// 		if user.Role != model.RoleAdmin {
-// 			WriteJSON(w, http.StatusForbidden, JSON{"error": "user is not admin"})
-// 			return
-// 		}
-// 		next.ServeHTTP(w, r)
-// 	})
-// }
+func (s *Server) adminMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := r.Context().Value(ctxUserKey).(model.User)
+		if user.Role != model.RoleAdmin {
+			WriteJSON(w, http.StatusForbidden, JSON{"error": "user is not admin"})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, JSON{"message": "Hello, World!"})
@@ -208,346 +214,347 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, s.db.Health())
 }
 
-// func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-// 	var body struct {
-// 		Email    string `json:"email"`
-// 		Password string `json:"password"`
-// 	}
-// 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-// 		log.Printf("Error decode request body: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	email, err := utils.IsValidEmail(body.Email)
-// 	if err != nil {
-// 		log.Printf("Input Email Error: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	password, err := utils.IsValidPassword(body.Password)
-// 	if err != nil {
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	userExisted, err := s.db.SelectUserByEmail(r.Context(), email)
-// 	if err != nil && err != sql.ErrNoRows {
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	if userExisted != nil {
-// 		WriteJSON(w, http.StatusConflict, JSON{"error": "email already existed"})
-// 		return
-// 	}
-// 	user := models.User{
-// 		Email:    email,
-// 		Password: password,
-// 		IsActive: true,
-// 		Role:     models.RoleUser,
-// 	}
-// 	err = s.db.InsertUser(r.Context(), &user)
-// 	if err != nil {
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	userDTO := utils.UserToUserDTO(&user)
-// 	token, err := utils.GenerateJWT(s.config.JWT, &userDTO)
-// 	if err != nil {
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	WriteJSON(w, http.StatusCreated, JSON{"user": userDTO, "token": token})
-// }
+func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	email, err := utils.IsValidEmail(body.Email)
+	if err != nil {
+		log.Printf("Input Email Error: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	password, err := utils.IsValidPassword(body.Password)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	userExisted, err := s.db.SelectUserByEmail(r.Context(), email)
+	if err != nil && err != sql.ErrNoRows {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	if userExisted != nil {
+		WriteJSON(w, http.StatusConflict, JSON{"error": "email already existed"})
+		return
+	}
+	user := model.User{
+		Email:    email,
+		Password: password,
+		IsActive: true,
+		Role:     model.RoleUser,
+	}
+	err = s.db.InsertUser(r.Context(), &user)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	userDTO := utils.UserToUserDTO(&user)
+	token, err := utils.GenerateJWT(s.config.JWT, &userDTO)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	WriteJSON(w, http.StatusCreated, JSON{"user": userDTO, "token": token})
+}
 
-// func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
-// 	var body struct {
-// 		Email    string `json:"email"`
-// 		Password string `json:"password"`
-// 	}
-// 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-// 		log.Printf("Error decode request body: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-//
-// 	userExisted, err := s.db.SelectUserByEmail(r.Context(), body.Email)
-// 	if err != nil {
-// 		if err == sql.ErrNoRows {
-// 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "email not found"})
-// 			return
-// 		}
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	if !utils.ValidatePassword(userExisted.Password, body.Password) {
-// 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "password incorrect"})
-// 		return
-// 	}
-// 	userDTO := utils.UserToUserDTO(userExisted)
-// 	token, err := utils.GenerateJWT(s.config.JWT, &userDTO)
-// 	if err != nil {
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	WriteJSON(w, http.StatusOK, JSON{"user": userDTO, "token": token})
-// }
+func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
 
-// func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
-// 	paths := strings.Split(r.URL.Path, "/")
-// 	userId := paths[len(paths)-1] // path/user/{userId}
-// 	existedUser, err := s.db.SelectUserById(r.Context(), userId)
-// 	if err != nil {
-// 		if err == sql.ErrNoRows {
-// 			WriteJSON(w, http.StatusNotFound, JSON{"error": "user not found"})
-// 			return
-// 		}
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	WriteJSON(w, http.StatusOK, utils.UserToUserDTO(existedUser))
-// }
+	userExisted, err := s.db.SelectUserByEmail(r.Context(), body.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "email not found"})
+			return
+		}
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	if !utils.ValidatePassword(userExisted.Password, body.Password) {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "password incorrect"})
+		return
+	}
+	userDTO := utils.UserToUserDTO(userExisted)
+	token, err := utils.GenerateJWT(s.config.JWT, &userDTO)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	WriteJSON(w, http.StatusOK, JSON{"user": userDTO, "token": token})
+}
 
-// func (s *Server) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
-// 	perPageStr := r.URL.Query().Get("perPage")
-// 	pageNumberStr := r.URL.Query().Get("pageNumber")
-// 	allStr := r.URL.Query().Get("all")
-// 	filter := r.URL.Query().Get("q")
-// 	var err error
-//
-// 	limit, err := strconv.Atoi(perPageStr)
-// 	if err != nil || limit < 1 {
-// 		limit = 10
-// 	}
-// 	pageNumber, err := strconv.Atoi(pageNumberStr)
-// 	if err != nil || pageNumber < 1 {
-// 		pageNumber = 1
-// 	}
-// 	isGetAll := allStr == "true"
-// 	offset := (pageNumber - 1) * limit
-//
-// 	divideAndRoundUp := func(a, b int) int {
-// 		return (a + b - 1) / b // e.g. 10 / 3 = (10 + 3 - 1) / 3 = 4
-// 	}
-//
-// 	usersCh := make(chan []*models.UserDTO)
-// 	countCh := make(chan int)
-// 	errCh := make(chan error, 2)
-// 	defer close(errCh)
-//
-// 	var wg sync.WaitGroup
-// 	wg.Add(2)
-// 	defer wg.Wait()
-//
-// 	go func() {
-// 		defer wg.Done()
-// 		defer close(usersCh)
-// 		users, err := s.db.SelectUsers(r.Context(), limit, offset, filter, isGetAll)
-// 		if err != nil {
-// 			errCh <- err
-// 			return
-// 		}
-// 		usersCh <- users
-// 	}()
-//
-// 	go func() {
-// 		defer wg.Done()
-// 		defer close(countCh)
-// 		countUsers, err := s.db.CountUsers(r.Context(), filter, isGetAll)
-// 		if err != nil {
-// 			errCh <- err
-// 			return
-// 		}
-// 		countCh <- countUsers
-// 	}()
-//
-// 	var users []*model.UserDTO
-// 	var count int
-//
-// 	select {
-// 	case err := <-errCh:
-// 		log.Printf("Error when get all users: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	default:
-// 		users = <-usersCh
-// 		count = <-countCh
-// 	}
-//
-// 	WriteJSON(w, http.StatusOK, JSON{
-// 		"users":      users,
-// 		"totalPage":  divideAndRoundUp(count, limit),
-// 		"perPage":    limit,
-// 		"pageNumber": pageNumber,
-// 	})
-// }
+func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	paths := strings.Split(r.URL.Path, "/")
+	userId := paths[len(paths)-1] // path/user/{userId}
+	existedUser, err := s.db.SelectUserById(r.Context(), userId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			WriteJSON(w, http.StatusNotFound, JSON{"error": "user not found"})
+			return
+		}
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	WriteJSON(w, http.StatusOK, utils.UserToUserDTO(existedUser))
+}
 
-// func (s *Server) GetMeHandler(w http.ResponseWriter, r *http.Request) {
-// 	user := r.Context().Value(ctxUserKey).(model.User)
-// 	userDTO := utils.UserToUserDTO(&user)
-// 	token, err := utils.GenerateJWT(s.config.JWT, &userDTO)
-// 	if err != nil {
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	WriteJSON(w, http.StatusOK, JSON{"token": token, "user": userDTO})
-// }
+func (s *Server) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+	perPageStr := r.URL.Query().Get("perPage")
+	pageNumberStr := r.URL.Query().Get("pageNumber")
+	allStr := r.URL.Query().Get("all")
+	filter := r.URL.Query().Get("q")
+	var err error
 
-// func (s *Server) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
-// 	var body struct {
-// 		Email string `json:"email"` // NOTE: explicitly state what we will update
-// 	}
-// 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-// 		log.Printf("Error decode request body: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	email, err := utils.IsValidEmail(body.Email)
-// 	if err != nil {
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	paths := strings.Split(r.URL.Path, "/")
-// 	userIdPath := paths[len(paths)-1] // path/user/{userId}
-// 	userIdToken := r.Context().Value(ctxUserKey).(model.User).Id
-// 	if userIdPath != userIdToken {
-// 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "userIdToken and userIdPath mismatch"})
-// 		return
-// 	}
-// 	updatedUserDTO, err := s.db.UpdateUser(r.Context(), userIdPath, email)
-// 	if err != nil {
-// 		if pgErr, ok := err.(*pgconn.PgError); ok {
-// 			if pgErr.Code == "23505" {
-// 				WriteJSON(w, http.StatusConflict, JSON{"error": "email already existed"})
-// 				return
-// 			}
-// 		}
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		log.Printf("Error: %v", err)
-// 		return
-// 	}
-// 	WriteJSON(w, http.StatusOK, updatedUserDTO)
-// }
+	limit, err := strconv.Atoi(perPageStr)
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+	pageNumber, err := strconv.Atoi(pageNumberStr)
+	if err != nil || pageNumber < 1 {
+		pageNumber = 1
+	}
+	isGetAll := allStr == "true"
+	offset := (pageNumber - 1) * limit
 
-// func (s *Server) StatusUserHandler(w http.ResponseWriter, r *http.Request) {
-// 	var body struct {
-// 		// NOTE: pointer to differentiate between explicit-false and not-provided
-// 		IsActive *bool `json:"is_active"`
-// 	}
-// 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-// 		log.Printf("Error decode request body: %v", err)
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	if body.IsActive == nil {
-// 		WriteJSON(w, http.StatusBadRequest, JSON{"error": "is_active is required in request body"})
-// 		return
-// 	}
-// 	paths := strings.Split(r.URL.Path, "/")
-// 	userIdPath := paths[len(paths)-2] // path/users/{userId}/status
-// 	userInToken := r.Context().Value(ctxUserKey).(model.User)
-// 	userIdToken := userInToken.Id
-// 	// admin can activate or deactivate any user, user can only deactivate itself
-// 	if userInToken.Role != model.RoleAdmin {
-// 		// activate
-// 		if *body.IsActive {
-// 			WriteJSON(w, http.StatusForbidden, JSON{"error": "only admin can activate a user"})
-// 			return
-// 		}
-// 		// deactivate
-// 		if userIdToken != userIdPath {
-// 			WriteJSON(
-// 				w,
-// 				http.StatusForbidden,
-// 				JSON{"error": "you must be admin to deactivate other users than yourself"},
-// 			)
-// 			return
-// 		}
-// 		// fine to continue
-// 	}
-// 	err := s.db.UpdateUserStatus(r.Context(), userIdPath, *body.IsActive)
-// 	if err != nil {
-// 		if err == sql.ErrNoRows {
-// 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "user to be set status not found"})
-// 			return
-// 		}
-// 		log.Printf("Error: %v", err)
-// 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-// 		return
-// 	}
-// 	w.WriteHeader(http.StatusOK)
-// }
+	divideAndRoundUp := func(a, b int) int {
+		return (a + b - 1) / b // e.g. 10 / 3 = (10 + 3 - 1) / 3 = 4
+	}
 
-//	func (s *Server) PasswordUserHandler(w http.ResponseWriter, r *http.Request) {
-//		var body struct {
-//			OldPassword string `json:"old_password"`
-//			NewPassword string `json:"new_password"`
-//		}
-//		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-//			log.Printf("Error decode request body: %v", err)
-//			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-//			return
-//		}
-//		newPassword, err := utils.IsValidPassword(body.NewPassword)
-//		if err != nil {
-//			log.Printf("Error: %v", err)
-//			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-//			return
-//		}
-//		paths := strings.Split(r.URL.Path, "/")
-//		userIdPath := paths[len(paths)-2] // path/users/{userId}/status
-//		userInToken := r.Context().Value(ctxUserKey).(model.User)
-//		userIdToken := userInToken.Id
-//		if userIdPath != userIdToken {
-//			WriteJSON(w, http.StatusForbidden, JSON{"error": "cannot change another user's password"})
-//			return
-//		}
-//		if !utils.ValidatePassword(userInToken.Password, body.OldPassword) {
-//			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "old password is not correct"})
-//			return
-//		}
-//		err = s.db.UpdateUserPassword(r.Context(), userIdPath, newPassword)
-//		if err != nil {
-//			if err == sql.ErrNoRows {
-//				WriteJSON(
-//					w,
-//					http.StatusUnauthorized,
-//					JSON{"error": "user to be updated password not found"},
-//				)
-//				return
-//			}
-//			log.Printf("Error: %v", err)
-//			WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-//			return
-//		}
-//		w.WriteHeader(http.StatusOK)
-//	}
-//
-//	func (s *Server) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
-//		paths := strings.Split(r.URL.Path, "/")
-//		userIdPath := paths[len(paths)-1] // path/users/{userId}
-//		userIdToken := r.Context().Value(ctxUserKey).(model.User).Id
-//		if userIdPath == userIdToken {
-//			WriteJSON(w, http.StatusForbidden, JSON{"error": "admin cannot self-delete"})
-//			return
-//		}
-//		err := s.db.DeleteUserById(r.Context(), userIdPath)
-//		if err != nil {
-//			if err == sql.ErrNoRows {
-//				WriteJSON(w, http.StatusNotFound, JSON{"error": "user to be deleted not found"})
-//				return
-//			}
-//			log.Printf("Error: %v", err)
-//			WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-//			return
-//		}
-//		w.WriteHeader(http.StatusOK)
-//	}
+	usersCh := make(chan []*model.UserDTO)
+	countCh := make(chan int)
+	errCh := make(chan error, 2)
+	defer close(errCh)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	defer wg.Wait()
+
+	go func() {
+		defer wg.Done()
+		defer close(usersCh)
+		users, err := s.db.SelectUsers(r.Context(), limit, offset, filter, isGetAll)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		usersCh <- users
+	}()
+
+	go func() {
+		defer wg.Done()
+		defer close(countCh)
+		countUsers, err := s.db.CountUsers(r.Context(), filter, isGetAll)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		countCh <- countUsers
+	}()
+
+	var users []*model.UserDTO
+	var count int
+
+	select {
+	case err := <-errCh:
+		log.Printf("Error when get all users: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	default:
+		users = <-usersCh
+		count = <-countCh
+	}
+
+	WriteJSON(w, http.StatusOK, JSON{
+		"users":      users,
+		"totalPage":  divideAndRoundUp(count, limit),
+		"perPage":    limit,
+		"pageNumber": pageNumber,
+	})
+}
+
+func (s *Server) GetMeHandler(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(ctxUserKey).(model.User)
+	userDTO := utils.UserToUserDTO(&user)
+	token, err := utils.GenerateJWT(s.config.JWT, &userDTO)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	WriteJSON(w, http.StatusOK, JSON{"token": token, "user": userDTO})
+}
+
+func (s *Server) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email string `json:"email"` // NOTE: explicitly state what we will update
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	email, err := utils.IsValidEmail(body.Email)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	paths := strings.Split(r.URL.Path, "/")
+	userIdPath := paths[len(paths)-1] // path/user/{userId}
+	userIdToken := r.Context().Value(ctxUserKey).(model.User).Id
+	if userIdPath != userIdToken {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "userIdToken and userIdPath mismatch"})
+		return
+	}
+	updatedUserDTO, err := s.db.UpdateUser(r.Context(), userIdPath, email)
+	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "23505" {
+				WriteJSON(w, http.StatusConflict, JSON{"error": "email already existed"})
+				return
+			}
+		}
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		log.Printf("Error: %v", err)
+		return
+	}
+	WriteJSON(w, http.StatusOK, updatedUserDTO)
+}
+
+func (s *Server) StatusUserHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		// NOTE: pointer to differentiate between explicit-false and not-provided
+		IsActive *bool `json:"is_active"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	if body.IsActive == nil {
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": "is_active is required in request body"})
+		return
+	}
+	paths := strings.Split(r.URL.Path, "/")
+	userIdPath := paths[len(paths)-2] // path/users/{userId}/status
+	userInToken := r.Context().Value(ctxUserKey).(model.User)
+	userIdToken := userInToken.Id
+	// admin can activate or deactivate any user, user can only deactivate itself
+	if userInToken.Role != model.RoleAdmin {
+		// activate
+		if *body.IsActive {
+			WriteJSON(w, http.StatusForbidden, JSON{"error": "only admin can activate a user"})
+			return
+		}
+		// deactivate
+		if userIdToken != userIdPath {
+			WriteJSON(
+				w,
+				http.StatusForbidden,
+				JSON{"error": "you must be admin to deactivate other users than yourself"},
+			)
+			return
+		}
+		// fine to continue
+	}
+	err := s.db.UpdateUserStatus(r.Context(), userIdPath, *body.IsActive)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "user to be set status not found"})
+			return
+		}
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) PasswordUserHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	newPassword, err := utils.IsValidPassword(body.NewPassword)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	paths := strings.Split(r.URL.Path, "/")
+	userIdPath := paths[len(paths)-2] // path/users/{userId}/status
+	userInToken := r.Context().Value(ctxUserKey).(model.User)
+	userIdToken := userInToken.Id
+	if userIdPath != userIdToken {
+		WriteJSON(w, http.StatusForbidden, JSON{"error": "cannot change another user's password"})
+		return
+	}
+	if !utils.ValidatePassword(userInToken.Password, body.OldPassword) {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "old password is not correct"})
+		return
+	}
+	err = s.db.UpdateUserPassword(r.Context(), userIdPath, newPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			WriteJSON(
+				w,
+				http.StatusUnauthorized,
+				JSON{"error": "user to be updated password not found"},
+			)
+			return
+		}
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	paths := strings.Split(r.URL.Path, "/")
+	userIdPath := paths[len(paths)-1] // path/users/{userId}
+	userIdToken := r.Context().Value(ctxUserKey).(model.User).Id
+	if userIdPath == userIdToken {
+		WriteJSON(w, http.StatusForbidden, JSON{"error": "admin cannot self-delete"})
+		return
+	}
+	err := s.db.DeleteUserById(r.Context(), userIdPath)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			WriteJSON(w, http.StatusNotFound, JSON{"error": "user to be deleted not found"})
+			return
+		}
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func (s *Server) websocketHandler(w http.ResponseWriter, r *http.Request) {
 	socket, err := websocket.Accept(w, r, nil)
 

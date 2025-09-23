@@ -1,15 +1,14 @@
 package database
 
 import (
+	. "auth/internal/model"
+	. "auth/internal/utils"
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
-
-	// . "github.com/minhhoccode111/realworldgo/internal/models"
-	. "github.com/minhhoccode111/realworldgo/internal/utils"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -29,25 +28,20 @@ type Service interface {
 	CountUsers(ctx context.Context, filter string, isGetAll bool) (int, error)
 
 	// SelectUsers returns a slice of users from the database for pagination.
-	// SelectUsers(
-	// 	ctx context.Context,
-	// 	limit, offset int,
-	// 	filter string,
-	// 	isGetAll bool,
-	// ) ([]*UserDTO, error)
+	SelectUsers(ctx context.Context, limit, offset int, filter string, isGetAll bool) ([]*UserDTO, error)
 
 	// NOTE: GetUserById and GetUserByEmail have to return User model because sometimes we need password to update user
 
 	// SelectUserById returns a user from the database by its ID.
-	// SelectUserById(ctx context.Context, id string) (*User, error)
+	SelectUserById(ctx context.Context, id string) (*User, error)
 	// SelectUserByEmail returns a user from the database by its email.
-	// SelectUserByEmail(ctx context.Context, email string) (*User, error)
+	SelectUserByEmail(ctx context.Context, email string) (*User, error)
 
 	// InsertUser inserts a new user into the database.
-	// InsertUser(ctx context.Context, user *User) error
+	InsertUser(ctx context.Context, user *User) error
 
 	// UpdateUser updates the email of a user in the database.
-	// UpdateUser(ctx context.Context, id string, email string) (*UserDTO, error)
+	UpdateUser(ctx context.Context, id string, email string) (*UserDTO, error)
 
 	// UpdateUserPassword updates the password of a user in the database.
 	UpdateUserPassword(ctx context.Context, id string, password string) error
@@ -63,20 +57,20 @@ type service struct {
 	db *sql.DB
 }
 
-// func New(connStr string) Service {
-// 	db, err := sql.Open("pgx", connStr)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	return NewService(db)
-// }
+func New(connStr string) Service {
+	db, err := sql.Open("pgx", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return NewService(db)
+}
 
 // NewService creates a new database service with the given *sql.DB instance.
 // This function is primarily intended for testing purposes, allowing a mock database
 // to be injected.
-// func NewService(db *sql.DB) Service {
-// 	return &service{db: db}
-// }
+func NewService(db *sql.DB) Service {
+	return &service{db: db}
+}
 
 // Health checks the health of the database connection by pinging the database.
 // It returns a map with keys indicating various health statistics.
@@ -160,118 +154,112 @@ func (s *service) CountUsers(ctx context.Context, filter string, isGetAll bool) 
 	return count, nil
 }
 
-// func (s *service) SelectUsers(
-// 	ctx context.Context,
-// 	limit int,
-// 	offset int,
-// 	filter string,
-// 	isGetAll bool,
-// ) ([]*UserDTO, error) {
-// 	var rows *sql.Rows
-// 	var err error
-// 	if isGetAll {
-// 		rows, err = s.db.QueryContext(ctx, `
-// 		select id, email, is_active, role from users
-// 		where email ilike '%' || $1 || '%'
-// 		limit $2 offset $3
-// 		`, filter, limit, offset)
-// 	} else {
-// 		rows, err = s.db.QueryContext(ctx, `
-// 		select id, email, is_active, role from users
-// 		where email ilike '%' || $1 || '%'
-// 		and is_active = true
-// 		limit $2 offset $3
-// 		`, filter, limit, offset)
-// 	}
-// 	if err != nil {
-// 		log.Printf("Error select users: %v", err)
-// 		return nil, fmt.Errorf("Error select users: %v", err)
-// 	}
-// 	defer rows.Close()
-// 	var users = []*UserDTO{}
-// 	for rows.Next() {
-// 		var user UserDTO
-// 		err := rows.Scan(&user.Id, &user.Email, &user.IsActive, &user.Role)
-// 		if err != nil {
-// 			log.Printf("Error Scan UserDTO: %v", err)
-// 			return nil, err
-// 		}
-// 		users = append(users, &user)
-// 	}
-// 	return users, nil
-// }
+func (s *service) SelectUsers(ctx context.Context, limit int, offset int, filter string, isGetAll bool) ([]*UserDTO, error) {
+	var rows *sql.Rows
+	var err error
+	if isGetAll {
+		rows, err = s.db.QueryContext(ctx, `
+		select id, email, is_active, role from users
+		where email ilike '%' || $1 || '%'
+		limit $2 offset $3
+		`, filter, limit, offset)
+	} else {
+		rows, err = s.db.QueryContext(ctx, `
+		select id, email, is_active, role from users
+		where email ilike '%' || $1 || '%'
+		and is_active = true
+		limit $2 offset $3
+		`, filter, limit, offset)
+	}
+	if err != nil {
+		log.Printf("Error select users: %v", err)
+		return nil, fmt.Errorf("Error select users: %v", err)
+	}
+	defer rows.Close()
+	var users = []*UserDTO{}
+	for rows.Next() {
+		var user UserDTO
+		err := rows.Scan(&user.Id, &user.Email, &user.IsActive, &user.Role)
+		if err != nil {
+			log.Printf("Error Scan UserDTO: %v", err)
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, nil
+}
 
-// func (s *service) SelectUserById(ctx context.Context, id string) (*User, error) {
-// 	var user User
-// 	err := s.db.QueryRowContext(ctx, `
-// 		select id, email, is_active, role, password
-// 		from users
-// 		where id = $1
-// 		`,
-// 		id,
-// 	).
-// 		Scan(&user.Id, &user.Email, &user.IsActive, &user.Role, &user.Password)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &user, nil
-// }
+func (s *service) SelectUserById(ctx context.Context, id string) (*User, error) {
+	var user User
+	err := s.db.QueryRowContext(ctx, `
+		select id, email, is_active, role, password
+		from users
+		where id = $1
+		`,
+		id,
+	).
+		Scan(&user.Id, &user.Email, &user.IsActive, &user.Role, &user.Password)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
 
-// func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, error) {
-// 	var user User
-// 	err := s.db.QueryRowContext(ctx, `
-// 		select id, email, is_active, role, password
-// 		from users
-// 		where email = $1
-// 		`, email).
-// 		Scan(&user.Id, &user.Email, &user.IsActive, &user.Role, &user.Password)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &user, nil
-// }
+func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, error) {
+	var user User
+	err := s.db.QueryRowContext(ctx, `
+		select id, email, is_active, role, password
+		from users
+		where email = $1
+		`, email).
+		Scan(&user.Id, &user.Email, &user.IsActive, &user.Role, &user.Password)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
 
-// func (s *service) InsertUser(ctx context.Context, user *User) error {
-// 	hashedPassword, err := HashedPassword(user.Password)
-// 	if err != nil {
-// 		log.Printf("Error hashing %v: %v", user.Password, err)
-// 		return fmt.Errorf("Error hashing %v: %v", user.Password, err)
-// 	}
-// 	row := s.db.QueryRowContext(ctx, `
-// 		insert into users(email, is_active, role, password)
-// 		values($1, $2, $3, $4)
-// 		returning id
-// 		`,
-// 		user.Email,
-// 		user.IsActive,
-// 		user.Role,
-// 		hashedPassword,
-// 	)
-// 	// pass generated id back to user
-// 	if err := row.Scan(&user.Id); err != nil {
-// 		log.Printf("Error insert user: %v", err)
-// 		return fmt.Errorf("Error insert user: %v", err)
-// 	}
-// 	return nil
-// }
+func (s *service) InsertUser(ctx context.Context, user *User) error {
+	hashedPassword, err := HashedPassword(user.Password)
+	if err != nil {
+		log.Printf("Error hashing %v: %v", user.Password, err)
+		return fmt.Errorf("Error hashing %v: %v", user.Password, err)
+	}
+	row := s.db.QueryRowContext(ctx, `
+		insert into users(email, is_active, role, password)
+		values($1, $2, $3, $4)
+		returning id
+		`,
+		user.Email,
+		user.IsActive,
+		user.Role,
+		hashedPassword,
+	)
+	// pass generated id back to user
+	if err := row.Scan(&user.Id); err != nil {
+		log.Printf("Error insert user: %v", err)
+		return fmt.Errorf("Error insert user: %v", err)
+	}
+	return nil
+}
 
-// func (s *service) UpdateUser(ctx context.Context, id string, email string) (*UserDTO, error) {
-// 	result := s.db.QueryRowContext(ctx, `
-// 		update users
-// 		set email = $1
-// 		where id = $2
-// 		returning id, role, email, is_active
-// 		`,
-// 		email,
-// 		id,
-// 	)
-// 	var updatedUser UserDTO
-// 	if err := result.Scan(&updatedUser.Id, &updatedUser.Role, &updatedUser.Email, &updatedUser.IsActive); err != nil {
-// 		log.Printf("Error update user: %v", err)
-// 		return nil, err
-// 	}
-// 	return &updatedUser, nil
-// }
+func (s *service) UpdateUser(ctx context.Context, id string, email string) (*UserDTO, error) {
+	result := s.db.QueryRowContext(ctx, `
+		update users
+		set email = $1
+		where id = $2
+		returning id, role, email, is_active
+		`,
+		email,
+		id,
+	)
+	var updatedUser UserDTO
+	if err := result.Scan(&updatedUser.Id, &updatedUser.Role, &updatedUser.Email, &updatedUser.IsActive); err != nil {
+		log.Printf("Error update user: %v", err)
+		return nil, err
+	}
+	return &updatedUser, nil
+}
 
 func (s *service) UpdateUserPassword(ctx context.Context, id string, password string) error {
 	hashedPassword, err := HashedPassword(password)

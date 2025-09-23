@@ -1,42 +1,47 @@
 package utils
 
 import (
+	"auth/internal/config"
+	"auth/internal/model"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// func UserToUserDTO(user *model.User) model.UserDTO {
-// 	return model.UserDTO{
-// 		Id:       user.Id,
-// 		Email:    user.Email,
-// 		IsActive: user.IsActive,
-// 		Role:     user.Role,
-// 	}
-// }
+func UserToUserDTO(user *model.User) model.UserDTO {
+	return model.UserDTO{
+		Id:       user.Id,
+		Email:    user.Email,
+		IsActive: user.IsActive,
+		Role:     user.Role,
+	}
+}
 
-// func GenerateJWT(jwtConfig config.JWTConfig, user *model.UserDTO) (string, error) {
-// 	if jwtConfig.Secret == "" {
-// 		return "", fmt.Errorf("JWT secret cannot be empty")
-// 	}
-// 	secretKey := []byte(jwtConfig.Secret)
-// 	expirationTime := time.Now().Add(jwtConfig.Expiration).Unix() // Calculate future expiration
-// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-// 		"userId": user.Id,
-// 		"exp":    expirationTime, // Use the calculated Unix timestamp
-// 		"iat":    time.Now().Unix(),
-// 		"iss":    jwtConfig.Issuer,
-// 	})
-// 	tokenString, err := token.SignedString(secretKey)
-// 	if err != nil {
-// 		log.Printf("error signing token: %v", err)
-// 		return "", fmt.Errorf("error signing token: %v", err)
-// 	}
-// 	return tokenString, nil
-// }
+func GenerateJWT(jwtConfig config.JWTConfig, user *model.UserDTO) (string, error) {
+	if jwtConfig.Secret == "" {
+		return "", fmt.Errorf("JWT secret cannot be empty")
+	}
+	secretKey := []byte(jwtConfig.Secret)
+	expirationTime := time.Now().Add(jwtConfig.Expiration).Unix() // Calculate future expiration
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"userId": user.Id,
+		"exp":    expirationTime, // Use the calculated Unix timestamp
+		"iat":    time.Now().Unix(),
+		"iss":    jwtConfig.Issuer,
+	})
+	tokenString, err := token.SignedString(secretKey)
+	if err != nil {
+		log.Printf("error signing token: %v", err)
+		return "", fmt.Errorf("error signing token: %v", err)
+	}
+	return tokenString, nil
+}
 
 func ValidatePassword(hashedPassword string, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil
