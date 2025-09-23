@@ -20,7 +20,7 @@ RUN apk add --no-cache make
 
 # to run migrations
 COPY --from=build /go/bin/goose /usr/local/bin/goose
-COPY --from=build /app/internal/migrations /app/migrations
+COPY --from=build /app/migrations /app/migrations
 COPY --from=build /app/main /app/main
 COPY --from=build /app/Makefile /app/Makefile
 COPY --from=build /app/.env /app/.env
