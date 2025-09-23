@@ -1,10 +1,11 @@
 package server
 
 import (
-	"auth/internal/config"
-	"auth/internal/database"
 	"log"
 	"net/http"
+
+	"github.com/minhhoccode111/realworldgo/internal/config"
+	"github.com/minhhoccode111/realworldgo/internal/database"
 )
 
 type Server struct {
@@ -20,7 +21,7 @@ func NewServer() *http.Server {
 
 	server := &Server{
 		config: cfg,
-		db:     database.New(cfg.Database.DatabaseURL()),
+		// db:     database.New(cfg.Database.DatabaseURL()),
 	}
 
 	httpServer := &http.Server{
