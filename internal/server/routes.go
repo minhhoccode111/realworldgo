@@ -339,7 +339,7 @@ func (s *Server) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 		return (a + b - 1) / b // e.g. 10 / 3 = (10 + 3 - 1) / 3 = 4
 	}
 
-	usersCh := make(chan []*model.UserDTO)
+	usersCh := make(chan []*model.User)
 	countCh := make(chan int)
 	errCh := make(chan error, 2)
 	defer close(errCh)
@@ -370,7 +370,7 @@ func (s *Server) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 		countCh <- countUsers
 	}()
 
-	var users []*model.UserDTO
+	var users []*model.User
 	var count int
 
 	select {

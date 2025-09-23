@@ -14,8 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func UserToUserDTO(user *model.User) model.UserDTO {
-	return model.UserDTO{
+func UserToUserDTO(user *model.User) model.User {
+	return model.User{
 		Id:    user.Id,
 		Email: user.Email,
 		// IsActive: user.IsActive,
@@ -23,7 +23,7 @@ func UserToUserDTO(user *model.User) model.UserDTO {
 	}
 }
 
-func GenerateJWT(jwtConfig config.JWTConfig, user *model.UserDTO) (string, error) {
+func GenerateJWT(jwtConfig config.JWTConfig, user *model.User) (string, error) {
 	if jwtConfig.Secret == "" {
 		return "", fmt.Errorf("JWT secret cannot be empty")
 	}

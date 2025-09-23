@@ -33,7 +33,7 @@ type Service interface {
 		limit, offset int,
 		filter string,
 		isGetAll bool,
-	) ([]*UserDTO, error)
+	) ([]*User, error)
 
 	// NOTE: GetUserById and GetUserByEmail have to return User model because sometimes we need password to update user
 
@@ -46,7 +46,7 @@ type Service interface {
 	InsertUser(ctx context.Context, user *User) error
 
 	// UpdateUser updates the email of a user in the database.
-	UpdateUser(ctx context.Context, id string, email string) (*UserDTO, error)
+	UpdateUser(ctx context.Context, id string, email string) (*User, error)
 
 	// UpdateUserPassword updates the password of a user in the database.
 	UpdateUserPassword(ctx context.Context, id string, password string) error
@@ -165,7 +165,7 @@ func (s *service) SelectUsers(
 	offset int,
 	filter string,
 	isGetAll bool,
-) ([]*UserDTO, error) {
+) ([]*User, error) {
 	var rows *sql.Rows
 	var err error
 	if isGetAll {
@@ -187,9 +187,9 @@ func (s *service) SelectUsers(
 		return nil, fmt.Errorf("Error select users: %v", err)
 	}
 	defer rows.Close()
-	var users = []*UserDTO{}
+	var users = []*User{}
 	for rows.Next() {
-		var user UserDTO
+		var user User
 		err := rows.Scan(
 			&user.Id,
 			&user.Email,
@@ -197,7 +197,7 @@ func (s *service) SelectUsers(
 			// &user.Role,
 		)
 		if err != nil {
-			log.Printf("Error Scan UserDTO: %v", err)
+			log.Printf("Error Scan User: %v", err)
 			return nil, err
 		}
 		users = append(users, &user)
@@ -271,7 +271,7 @@ func (s *service) InsertUser(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (s *service) UpdateUser(ctx context.Context, id string, email string) (*UserDTO, error) {
+func (s *service) UpdateUser(ctx context.Context, id string, email string) (*User, error) {
 	result := s.db.QueryRowContext(ctx, `
 		update users
 		set email = $1
@@ -281,7 +281,7 @@ func (s *service) UpdateUser(ctx context.Context, id string, email string) (*Use
 		email,
 		id,
 	)
-	var updatedUser UserDTO
+	var updatedUser User
 	if err := result.Scan(&updatedUser.Id,
 		// &updatedUser.Role,
 		&updatedUser.Email,
