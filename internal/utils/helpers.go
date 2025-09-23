@@ -16,10 +16,10 @@ import (
 
 func UserToUserDTO(user *model.User) model.UserDTO {
 	return model.UserDTO{
-		Id:       user.Id,
-		Email:    user.Email,
-		IsActive: user.IsActive,
-		Role:     user.Role,
+		Id:    user.Id,
+		Email: user.Email,
+		// IsActive: user.IsActive,
+		// Role:     user.Role,
 	}
 }
 

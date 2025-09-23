@@ -1,6 +1,4 @@
--- to test after the migration that drop default of updated_at column
-
--- create a dummy user
+-- create a user
 INSERT INTO users (email, username, password)
 VALUES (
   'minhhoccode111@gmail.com',

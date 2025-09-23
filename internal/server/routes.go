@@ -185,10 +185,10 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 			return
 		}
-		if !user.IsActive {
-			WriteJSON(w, http.StatusForbidden, JSON{"error": "user in jwt is inactive"})
-			return
-		}
+		// if !user.IsActive {
+		// 	WriteJSON(w, http.StatusForbidden, JSON{"error": "user in jwt is inactive"})
+		// 	return
+		// }
 		ctx := context.WithValue(r.Context(), ctxUserKey, *user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -197,11 +197,11 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 // Authorization middleware
 func (s *Server) adminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := r.Context().Value(ctxUserKey).(model.User)
-		if user.Role != model.RoleAdmin {
-			WriteJSON(w, http.StatusForbidden, JSON{"error": "user is not admin"})
-			return
-		}
+		// user := r.Context().Value(ctxUserKey).(model.User)
+		// if user.Role != model.RoleAdmin {
+		// 	WriteJSON(w, http.StatusForbidden, JSON{"error": "user is not admin"})
+		// 	return
+		// }
 		next.ServeHTTP(w, r)
 	})
 }
@@ -249,8 +249,8 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	user := model.User{
 		Email:    email,
 		Password: password,
-		IsActive: true,
-		Role:     model.RoleUser,
+		// IsActive: true,
+		// Role:     model.RoleUser,
 	}
 	err = s.db.InsertUser(r.Context(), &user)
 	if err != nil {
@@ -456,26 +456,26 @@ func (s *Server) StatusUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	paths := strings.Split(r.URL.Path, "/")
 	userIdPath := paths[len(paths)-2] // path/users/{userId}/status
-	userInToken := r.Context().Value(ctxUserKey).(model.User)
-	userIdToken := userInToken.Id
+	// userInToken := r.Context().Value(ctxUserKey).(model.User)
+	// userIdToken := userInToken.Id
 	// admin can activate or deactivate any user, user can only deactivate itself
-	if userInToken.Role != model.RoleAdmin {
-		// activate
-		if *body.IsActive {
-			WriteJSON(w, http.StatusForbidden, JSON{"error": "only admin can activate a user"})
-			return
-		}
-		// deactivate
-		if userIdToken != userIdPath {
-			WriteJSON(
-				w,
-				http.StatusForbidden,
-				JSON{"error": "you must be admin to deactivate other users than yourself"},
-			)
-			return
-		}
-		// fine to continue
-	}
+	// if userInToken.Role != model.RoleAdmin {
+	// 	// activate
+	// 	if *body.IsActive {
+	// 		WriteJSON(w, http.StatusForbidden, JSON{"error": "only admin can activate a user"})
+	// 		return
+	// 	}
+	// 	// deactivate
+	// 	if userIdToken != userIdPath {
+	// 		WriteJSON(
+	// 			w,
+	// 			http.StatusForbidden,
+	// 			JSON{"error": "you must be admin to deactivate other users than yourself"},
+	// 		)
+	// 		return
+	// 	}
+	// 	// fine to continue
+	// }
 	err := s.db.UpdateUserStatus(r.Context(), userIdPath, *body.IsActive)
 	if err != nil {
 		if err == sql.ErrNoRows {

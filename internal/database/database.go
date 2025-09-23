@@ -28,7 +28,12 @@ type Service interface {
 	CountUsers(ctx context.Context, filter string, isGetAll bool) (int, error)
 
 	// SelectUsers returns a slice of users from the database for pagination.
-	SelectUsers(ctx context.Context, limit, offset int, filter string, isGetAll bool) ([]*UserDTO, error)
+	SelectUsers(
+		ctx context.Context,
+		limit, offset int,
+		filter string,
+		isGetAll bool,
+	) ([]*UserDTO, error)
 
 	// NOTE: GetUserById and GetUserByEmail have to return User model because sometimes we need password to update user
 
@@ -154,7 +159,13 @@ func (s *service) CountUsers(ctx context.Context, filter string, isGetAll bool) 
 	return count, nil
 }
 
-func (s *service) SelectUsers(ctx context.Context, limit int, offset int, filter string, isGetAll bool) ([]*UserDTO, error) {
+func (s *service) SelectUsers(
+	ctx context.Context,
+	limit int,
+	offset int,
+	filter string,
+	isGetAll bool,
+) ([]*UserDTO, error) {
 	var rows *sql.Rows
 	var err error
 	if isGetAll {
@@ -179,7 +190,12 @@ func (s *service) SelectUsers(ctx context.Context, limit int, offset int, filter
 	var users = []*UserDTO{}
 	for rows.Next() {
 		var user UserDTO
-		err := rows.Scan(&user.Id, &user.Email, &user.IsActive, &user.Role)
+		err := rows.Scan(
+			&user.Id,
+			&user.Email,
+			// &user.IsActive,
+			// &user.Role,
+		)
 		if err != nil {
 			log.Printf("Error Scan UserDTO: %v", err)
 			return nil, err
@@ -198,7 +214,13 @@ func (s *service) SelectUserById(ctx context.Context, id string) (*User, error) 
 		`,
 		id,
 	).
-		Scan(&user.Id, &user.Email, &user.IsActive, &user.Role, &user.Password)
+		Scan(
+			&user.Id,
+			&user.Email,
+			// &user.IsActive,
+			// &user.Role,
+			&user.Password,
+		)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +234,13 @@ func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, e
 		from users
 		where email = $1
 		`, email).
-		Scan(&user.Id, &user.Email, &user.IsActive, &user.Role, &user.Password)
+		Scan(
+			&user.Id,
+			&user.Email,
+			// &user.IsActive,
+			// &user.Role,
+			&user.Password,
+		)
 	if err != nil {
 		return nil, err
 	}
@@ -231,8 +259,8 @@ func (s *service) InsertUser(ctx context.Context, user *User) error {
 		returning id
 		`,
 		user.Email,
-		user.IsActive,
-		user.Role,
+		// user.IsActive,
+		// user.Role,
 		hashedPassword,
 	)
 	// pass generated id back to user
@@ -254,7 +282,11 @@ func (s *service) UpdateUser(ctx context.Context, id string, email string) (*Use
 		id,
 	)
 	var updatedUser UserDTO
-	if err := result.Scan(&updatedUser.Id, &updatedUser.Role, &updatedUser.Email, &updatedUser.IsActive); err != nil {
+	if err := result.Scan(&updatedUser.Id,
+		// &updatedUser.Role,
+		&updatedUser.Email,
+		// &updatedUser.IsActive,
+	); err != nil {
 		log.Printf("Error update user: %v", err)
 		return nil, err
 	}
