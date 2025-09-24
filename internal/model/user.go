@@ -16,3 +16,12 @@ type User struct {
 	Favorites   uint      `json:"favorites"`
 	Password    string    `json:"password"`
 }
+
+func UserToUserDTO(user *User) User {
+	return User{
+		Id:    user.Id,
+		Email: user.Email,
+		// IsActive: user.IsActive,
+		// Role:     user.Role,
+	}
+}

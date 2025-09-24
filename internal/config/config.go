@@ -51,13 +51,13 @@ func Load() (*Config, error) {
 	config := &Config{
 		Server: ServerConfig{
 			Host:         getEnvString("SERVER_HOST", "localhost"),
-			Port:         getEnvInt("SERVER_PORT", 8000),
+			Port:         getEnvInt("SERVER_PORT", 9999),
 			ReadTimeout:  getEnvDuration("SERVER_READ_TIMEOUT", 10*time.Second),
 			WriteTimeout: getEnvDuration("SERVER_WRITE_TIMEOUT", 10*time.Second),
 			IdleTimeout:  getEnvDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
 		},
 		Database: DatabaseConfig{
-			Name:     getEnvString("DB_NAME", "authz"),
+			Name:     getEnvString("DB_NAME", "blogapi"),
 			Host:     getEnvString("DB_HOST", "localhost"),
 			Port:     getEnvInt("DB_PORT", 5432),
 			Username: getEnvString("DB_USERNAME", "postgres"),
@@ -67,8 +67,8 @@ func Load() (*Config, error) {
 		},
 		JWT: JWTConfig{
 			Secret:     getEnvString("JWT_SECRET", "ai33yUUcmRPI64hq06ViG0404On-nMebsCtY4nTFqOg"),
-			Expiration: getEnvDuration("JWT_EXPIRATION", 24*time.Hour),
-			Issuer:     getEnvString("JWT_ISSUER", "myapp"),
+			Expiration: getEnvDuration("JWT_EXPIRATION", 240*time.Hour),
+			Issuer:     getEnvString("JWT_ISSUER", "blogapi"),
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: getEnvStringSlice("ACCESS_CONTROL_ALLOW_ORIGIN", []string{"*"}),
