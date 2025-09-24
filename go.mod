@@ -1,4 +1,4 @@
-module auth
+module github.com/minhhoccode111/realworldgo
 
 go 1.24.4
 

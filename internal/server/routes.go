@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"auth/internal/model"
-	"auth/internal/utils"
+	"github.com/minhhoccode111/realworldgo/internal/model"
+	"github.com/minhhoccode111/realworldgo/internal/utils"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"

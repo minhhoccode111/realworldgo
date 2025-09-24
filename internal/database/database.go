@@ -1,14 +1,15 @@
 package database
 
 import (
-	. "auth/internal/model"
-	. "auth/internal/utils"
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
+
+	. "github.com/minhhoccode111/realworldgo/internal/model"
+	. "github.com/minhhoccode111/realworldgo/internal/utils"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"

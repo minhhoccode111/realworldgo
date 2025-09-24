@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"auth/internal/server"
+	"github.com/minhhoccode111/realworldgo/internal/server"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {

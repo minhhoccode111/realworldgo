@@ -1,14 +1,15 @@
 package utils
 
 import (
-	"auth/internal/config"
-	"auth/internal/model"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/minhhoccode111/realworldgo/internal/config"
+	"github.com/minhhoccode111/realworldgo/internal/model"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
