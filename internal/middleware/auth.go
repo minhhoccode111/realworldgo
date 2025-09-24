@@ -13,9 +13,9 @@ import (
 )
 
 // Authentication middleware
-func AuthMiddleware(jwtSecret string, db database.Service) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func AuthMiddleware(jwtSecret string, db database.Service) func(http.HandlerFunc) http.HandlerFunc {
+	return func(handlerFunc http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
 			// get authentication header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
@@ -77,8 +77,7 @@ func AuthMiddleware(jwtSecret string, db database.Service) func(http.Handler) ht
 			// 	return
 			// }
 			ctx := context.WithValue(r.Context(), CtxUserKey, *user)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
+			handlerFunc(w, r.WithContext(ctx))
+		}
 	}
-
 }
