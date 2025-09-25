@@ -3,7 +3,9 @@
 @email = minhhoccode111@gmail.com
 @password = Bruh0!0!
 @username = minhhoccode111
-@token = your_token_here
+@bio = i like golang
+@image = https://www.w3schools.com/howto/img_avatar.png
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk3NTI2NTUsImlhdCI6MTc1ODg4ODY1NSwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjBhOWViNjNjLTZmMjYtNDlhMi1iMWFiLTc1MGNlMGNiYzYzZSJ9.eGWB3xNFKhslLD484C5R3hwzVzqotAOh19mHxzmJuxU
 @slug = article-slug
 @commentId = 123
 
@@ -28,16 +30,6 @@ POST {{api}}/users/login
     }
 }
 
-### Login and Remember Token
-POST {{api}}/users/login
-
-{
-    "user": {
-        "email": "{{email}}",
-        "password": "{{password}}"
-    }
-}
-
 ### Current User
 GET {{api}}/user
 Authorization: Token {{token}}
@@ -48,7 +40,11 @@ Authorization: Token {{token}}
 
 {
     "user": {
-        "email": "{{email}}"
+        "email": "{{email}}",
+        "username": "{{username}}",
+        "password": "{{password}}",
+        "image": "{{image}}",
+        "bio": "{{bio}}"
     }
 }
 

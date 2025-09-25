@@ -201,8 +201,95 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
 }
 
-func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request)        {}
-func (s *Server) PutUserHandler(w http.ResponseWriter, r *http.Request)        {}
+func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+	token, err := GenerateJWT(s.config.JWT, &user)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	userResponse := user.ToUserResponse(token)
+	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
+}
+
+func (s *Server) PutUserHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		User struct {
+			Email    string `json:"email"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Bio      string `json:"bio"`
+			Image    string `json:"image"`
+		} `json:"user"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+
+	user, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+
+	// ignore empty fields, if field is not empty, it must pass input validation
+	// otherwise, reject whole process
+
+	if body.User.Username != "" {
+		username, err := IsValidUsername(body.User.Username)
+		if err != nil {
+			log.Printf("Input Username Error: %v", err)
+			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+			return
+		}
+		user.Username = username
+	}
+
+	if body.User.Email != "" {
+		email, err := IsValidEmail(body.User.Email)
+		if err != nil {
+			log.Printf("Input Email Error: %v", err)
+			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+			return
+		}
+		user.Email = email
+	}
+
+	if body.User.Password != "" {
+		password, err := IsValidPassword(body.User.Password)
+		if err != nil {
+			log.Printf("Error: %v", err)
+			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+			return
+		}
+		user.Password = password
+	}
+
+	if body.User.Bio != "" {
+		user.Bio = body.User.Bio
+	}
+
+	if body.User.Image != "" {
+		user.Image = body.User.Image
+	}
+
+	err := s.db.UpdateUser(r.Context(), user.Id, &user)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+	token, err := GenerateJWT(s.config.JWT, &user)
+	userResponse := user.ToUserResponse(token)
+	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
+}
+
 func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request)    {}
 func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request)        {}

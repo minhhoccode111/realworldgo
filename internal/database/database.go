@@ -47,7 +47,7 @@ type Service interface {
 	InsertUser(ctx context.Context, user *User) error
 
 	// UpdateUser updates the email of a user in the database.
-	UpdateUser(ctx context.Context, id string, email string) (*User, error)
+	UpdateUser(ctx context.Context, userId string, newUser *User) error
 
 	// UpdateUserPassword updates the password of a user in the database.
 	UpdateUserPassword(ctx context.Context, id string, password string) error
@@ -206,23 +206,21 @@ func (s *service) SelectUsers(
 	return users, nil
 }
 
-func (s *service) SelectUserById(ctx context.Context, id string) (*User, error) {
+func (s *service) SelectUserById(ctx context.Context, userId string) (*User, error) {
 	var user User
-	err := s.db.QueryRowContext(ctx, `
-		select id, email, is_active, role, password
-		from users
-		where id = $1
-		`,
-		id,
-	).
-		Scan(
-			&user.Id,
-			&user.Email,
-			// &user.IsActive,
-			// &user.Role,
-			&user.Password,
-		)
-	if err != nil {
+	if err := s.db.QueryRowContext(ctx, `
+		select id, email, username, password, bio, image, created_at, updated_at
+		from users where id = $1 `, userId,
+	).Scan(
+		&user.Id,
+		&user.Email,
+		&user.Username,
+		&user.Password,
+		&user.Bio,
+		&user.Image,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	); err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -232,17 +230,17 @@ func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, e
 	var user User
 	if err := s.db.QueryRowContext(ctx, `
 		select id, email, username, password, bio, image, created_at, updated_at
-		from users where email = $1 `, email).
-		Scan(
-			&user.Id,
-			&user.Email,
-			&user.Username,
-			&user.Password,
-			&user.Bio,
-			&user.Image,
-			&user.CreatedAt,
-			&user.UpdatedAt,
-		); err != nil {
+		from users where email = $1 `, email,
+	).Scan(
+		&user.Id,
+		&user.Email,
+		&user.Username,
+		&user.Password,
+		&user.Bio,
+		&user.Image,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	); err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -273,26 +271,29 @@ func (s *service) InsertUser(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (s *service) UpdateUser(ctx context.Context, id string, email string) (*User, error) {
-	result := s.db.QueryRowContext(ctx, `
-		update users
-		set email = $1
-		where id = $2
-		returning id, role, email, is_active
-		`,
-		email,
-		id,
-	)
-	var updatedUser User
-	if err := result.Scan(&updatedUser.Id,
-		// &updatedUser.Role,
-		&updatedUser.Email,
-		// &updatedUser.IsActive,
-	); err != nil {
-		log.Printf("Error update user: %v", err)
-		return nil, err
+func (s *service) UpdateUser(ctx context.Context, userId string, newUser *User) error {
+	hashedPassword, err := HashedPassword(newUser.Password)
+	if err != nil {
+		log.Printf("Error hashing %v: %v", newUser.Password, err)
+		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
 	}
-	return &updatedUser, nil
+	_, err = s.db.ExecContext(ctx, `
+		update users set
+		email = $1,
+		username = $2,
+		password = $3,
+		image = $4,
+		bio = $5
+		where id = $6
+		`,
+		newUser.Email,
+		newUser.Username,
+		hashedPassword,
+		newUser.Image,
+		newUser.Bio,
+		userId,
+	)
+	return err
 }
 
 func (s *service) UpdateUserPassword(ctx context.Context, id string, password string) error {

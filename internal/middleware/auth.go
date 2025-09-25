@@ -24,17 +24,13 @@ func AuthMiddleware(jwtSecret string, db database.Service) func(http.HandlerFunc
 			}
 			parts := strings.Fields(authHeader)
 			if !strings.EqualFold(parts[0], "Token") {
-				WriteJSON(
-					w,
-					http.StatusUnauthorized,
+				WriteJSON(w, http.StatusUnauthorized,
 					JSON{"error": "authorization header must start with 'Token'"},
 				)
 				return
 			}
 			if len(parts) != 2 {
-				WriteJSON(
-					w,
-					http.StatusUnauthorized,
+				WriteJSON(w, http.StatusUnauthorized,
 					JSON{"error": "authorization header must be formatted as 'Token <token>'"},
 				)
 				return
@@ -72,10 +68,6 @@ func AuthMiddleware(jwtSecret string, db database.Service) func(http.HandlerFunc
 				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 				return
 			}
-			// if !user.IsActive {
-			// 	WriteJSON(w, http.StatusForbidden, JSON{"error": "user in jwt is inactive"})
-			// 	return
-			// }
 			ctx := context.WithValue(r.Context(), CtxUserKey, *user)
 			handlerFunc(w, r.WithContext(ctx))
 		}
