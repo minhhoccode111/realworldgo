@@ -106,21 +106,30 @@ func (s *Server) websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		User struct {
+			Email    string `json:"email"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+		} `json:"user"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
 		return
 	}
-	email, err := IsValidEmail(body.Email)
+	username, err := IsValidUsername(body.User.Username)
+	if err != nil {
+		log.Printf("Input Username Error: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+	email, err := IsValidEmail(body.User.Email)
 	if err != nil {
 		log.Printf("Input Email Error: %v", err)
 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
 		return
 	}
-	password, err := IsValidPassword(body.Password)
+	password, err := IsValidPassword(body.User.Password)
 	if err != nil {
 		log.Printf("Error: %v", err)
 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
@@ -138,28 +147,29 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user := model.User{
 		Email:    email,
+		Username: username,
 		Password: password,
-		// IsActive: true,
-		// Role:     model.RoleUser,
 	}
 	err = s.db.InsertUser(r.Context(), &user)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	userDTO := model.UserToUserDTO(&user)
-	token, err := GenerateJWT(s.config.JWT, &userDTO)
+	token, err := GenerateJWT(s.config.JWT, &user)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	WriteJSON(w, http.StatusCreated, JSON{"user": userDTO, "token": token})
+	userResponse := user.ToUserResponse(token)
+	WriteJSON(w, http.StatusCreated, JSON{"user": userResponse})
 }
 
 func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		User struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		} `json:"user"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
@@ -167,7 +177,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userExisted, err := s.db.SelectUserByEmail(r.Context(), body.Email)
+	userExisted, err := s.db.SelectUserByEmail(r.Context(), body.User.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "email not found"})
@@ -177,18 +187,18 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	if !ValidatePassword(userExisted.Password, body.Password) {
+	if !ValidatePassword(userExisted.Password, body.User.Password) {
 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "password incorrect"})
 		return
 	}
-	userDTO := model.UserToUserDTO(userExisted)
-	token, err := GenerateJWT(s.config.JWT, &userDTO)
+	token, err := GenerateJWT(s.config.JWT, userExisted)
 	if err != nil {
 		log.Printf("Error: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	WriteJSON(w, http.StatusOK, JSON{"user": userDTO, "token": token})
+	userResponse := userExisted.ToUserResponse(token)
+	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
 }
 
 func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request)        {}

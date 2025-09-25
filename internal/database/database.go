@@ -230,19 +230,19 @@ func (s *service) SelectUserById(ctx context.Context, id string) (*User, error) 
 
 func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
-	err := s.db.QueryRowContext(ctx, `
-		select id, email, is_active, role, password
-		from users
-		where email = $1
-		`, email).
+	if err := s.db.QueryRowContext(ctx, `
+		select id, email, username, password, bio, image, created_at, updated_at
+		from users where email = $1 `, email).
 		Scan(
 			&user.Id,
 			&user.Email,
-			// &user.IsActive,
-			// &user.Role,
+			&user.Username,
 			&user.Password,
-		)
-	if err != nil {
+			&user.Bio,
+			&user.Image,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		); err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -255,14 +255,15 @@ func (s *service) InsertUser(ctx context.Context, user *User) error {
 		return fmt.Errorf("Error hashing %v: %v", user.Password, err)
 	}
 	row := s.db.QueryRowContext(ctx, `
-		insert into users(email, is_active, role, password)
-		values($1, $2, $3, $4)
+		insert into users(email, username, password, bio, image)
+		values($1, $2, $3, $4, $5)
 		returning id
 		`,
 		user.Email,
-		// user.IsActive,
-		// user.Role,
+		user.Username,
 		hashedPassword,
+		user.Bio,
+		user.Image,
 	)
 	// pass generated id back to user
 	if err := row.Scan(&user.Id); err != nil {

@@ -1,5 +1,5 @@
 @url = http://localhost:9999
-@api = {{url}}/api
+@api = {{url}}/api/v1
 @email = minhhoccode111@gmail.com
 @password = Bruh0!0!
 @username = minhhoccode111
@@ -23,8 +23,8 @@ POST {{api}}/users/login
 
 {
     "user": {
-        "email":"{{email}}",
-        "password":"{{password}}",
+        "email": "{{email}}",
+        "password": "{{password}}"
     }
 }
 

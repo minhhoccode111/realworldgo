@@ -7,6 +7,18 @@ import (
 	"unicode"
 )
 
+func IsValidUsername(username string) (string, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return "", fmt.Errorf("username cannot be empty")
+	}
+	re := regexp.MustCompile(`^[a-zA-Z0-9]{2,50}$`)
+	if !re.MatchString(username) {
+		return "", fmt.Errorf("invalid username: %v", username)
+	}
+	return username, nil
+}
+
 func IsValidEmail(email string) (string, error) {
 	email = strings.TrimSpace(email)
 	if email == "" {
