@@ -7,14 +7,14 @@ import (
 )
 
 type User struct {
-	Id        string    `json:"id"`
-	Email     string    `json:"email"`
-	Username  string    `json:"username"`
-	Image     string    `json:"image"`
-	Bio       string    `json:"bio"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Password  string    `json:"password"`
+	Id        string
+	Email     string
+	Username  string
+	Image     string
+	Bio       string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Password  string
 }
 
 func (u *User) ToUserResponse(token string) *UserResponse {
@@ -27,9 +27,7 @@ func (u *User) ToUserResponse(token string) *UserResponse {
 	}
 }
 
-func (u *User) ValidateUserUpdateRequest(ur *UserUpdateRequest) error {
-	var err error
-
+func (u *User) ValidateUserUpdateRequest(ur *UserUpdateRequest) (err error) {
 	// ignore empty fields, if field is not empty, it must pass input validations
 	// otherwise, reject whole process
 

@@ -12,7 +12,7 @@ func IsValidUsername(username string) (string, error) {
 	if username == "" {
 		return "", fmt.Errorf("username cannot be empty")
 	}
-	re := regexp.MustCompile(`^[a-zA-Z0-9]{2,50}$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9]{2,}$`)
 	if !re.MatchString(username) {
 		return "", fmt.Errorf("invalid username: %v", username)
 	}
@@ -24,7 +24,7 @@ func IsValidEmail(email string) (string, error) {
 	if email == "" {
 		return "", fmt.Errorf("email cannot be empty")
 	}
-	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{5,}$`)
 	if !re.MatchString(email) {
 		return "", fmt.Errorf("invalid email: %v", email)
 	}
@@ -55,4 +55,36 @@ func IsValidPassword(password string) (string, error) {
 		)
 	}
 	return password, nil
+}
+
+func IsNotEmpty(str string) (string, error) {
+	str = strings.TrimSpace(str)
+	if str == "" {
+		return "", fmt.Errorf("string cannot be empty")
+	}
+	return str, nil
+}
+
+func IsValidTitle(title string) (string, error) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return "", fmt.Errorf("title cannot be empty")
+	}
+	return title, nil
+}
+
+func IsValidBody(body string) (string, error) {
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return "", fmt.Errorf("body cannot be empty")
+	}
+	return body, nil
+}
+
+func IsValidDescription(description string) (string, error) {
+	description = strings.TrimSpace(description)
+	if description == "" {
+		return "", fmt.Errorf("description cannot be empty")
+	}
+	return description, nil
 }

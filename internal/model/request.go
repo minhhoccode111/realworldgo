@@ -13,12 +13,11 @@ type UserRegisterRequest struct {
 	Password string `json:"password"`
 }
 
-func (ur *UserRegisterRequest) Validate() error {
-	var err error
+func (ur *UserRegisterRequest) Validate() (err error) {
 	ur.Username, err = utils.IsValidUsername(ur.Username)
 	ur.Email, err = utils.IsValidEmail(ur.Email)
 	ur.Password, err = utils.IsValidPassword(ur.Password)
-	return err
+	return
 }
 
 type UserUpdateRequest struct {
@@ -34,4 +33,11 @@ type ArticleCreateRequest struct {
 	Description string   `json:"description"`
 	Body        string   `json:"body"`
 	TagList     []string `json:"tagList"`
+}
+
+func (ac *ArticleCreateRequest) Validate() (err error) {
+	ac.Title, err = utils.IsNotEmpty(ac.Title)
+	ac.Body, err = utils.IsNotEmpty(ac.Body)
+	ac.Description, err = utils.IsNotEmpty(ac.Description)
+	return
 }

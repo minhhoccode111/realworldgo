@@ -42,11 +42,14 @@ type Service interface {
 	// SelectUserByEmail returns a user from the database by its email.
 	SelectUserByEmail(ctx context.Context, email string) (*model.User, error)
 
-	// InsertUser inserts a new user into the database.
-	InsertUser(ctx context.Context, user *model.User) error
+	// CreateUser inserts a new user into the database.
+	CreateUser(ctx context.Context, user *model.User) error
 
 	// UpdateUser updates the email of a user in the database.
 	UpdateUser(ctx context.Context, userId string, newUser *model.User) error
+
+	// CreateArticle inserts a new user into the database.
+	CreateArticle(ctx context.Context, newArticle *model.Article) error
 }
 
 type service struct {
@@ -234,7 +237,7 @@ func (s *service) SelectUserByEmail(ctx context.Context, email string) (*model.U
 	return &user, nil
 }
 
-func (s *service) InsertUser(ctx context.Context, user *model.User) error {
+func (s *service) CreateUser(ctx context.Context, user *model.User) error {
 	hashedPassword, err := utils.HashedPassword(user.Password)
 	if err != nil {
 		log.Printf("Error hashing %v: %v", user.Password, err)
@@ -278,4 +281,33 @@ func (s *service) UpdateUser(ctx context.Context, userId string, newUser *model.
 		userId,
 	)
 	return err
+}
+
+func (s *service) CreateArticle(ctx context.Context, newArticle *model.Article) (err error) {
+	// 1. insert new article to db to generate id
+	// 2. create a list of tags, will return error if unique constraint fail
+	// 3. create rows in junction table between article and tags
+	// we can apply concurrency for 1. and 2.
+	// and we also need ACID transaction to make sure both succeed
+
+	var tx *sql.Tx
+	tx, err = s.db.Begin()
+	if err != nil {
+		return
+	}
+
+	// defer a rollback in case of an error or panic
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r) // re-throw panic after Rollback
+		} else if err != nil {
+			tx.Rollback() // rollback transaction if error occurs
+		}
+	}()
+
+	// TODO: do something with queries
+
+	err = tx.Commit()
+	return
 }

@@ -132,7 +132,7 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Password: body.User.Password,
 	}
 
-	err = s.db.InsertUser(r.Context(), &newUser)
+	err = s.db.CreateUser(r.Context(), &newUser)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok {
 			if pgErr.Code == "23505" {
@@ -246,7 +246,47 @@ func (s *Server) PutUserHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
 }
 
-func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request)    {}
+func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var body struct {
+		Article model.ArticleCreateRequest `json:"article"`
+	}
+
+	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		return
+	}
+
+	currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+
+	err = body.Article.Validate()
+	if err != nil {
+		log.Printf("Error validating article create request: %v", err)
+		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
+		return
+	}
+
+	newArticle := model.Article{
+		AuthorId:    currentUser.Id,
+		Title:       body.Article.Title,
+		Body:        body.Article.Body,
+		Description: body.Article.Description,
+		TagList:     body.Article.TagList,
+	}
+
+	err = s.db.CreateArticle(r.Context(), &newArticle)
+	if err != nil {
+		log.Printf("Error creating article: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+}
+
 func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request)        {}
 func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request)     {}
