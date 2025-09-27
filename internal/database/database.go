@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/minhhoccode111/realworldgo/internal/model"
-	. "github.com/minhhoccode111/realworldgo/internal/utils"
+	"github.com/minhhoccode111/realworldgo/internal/model"
+	"github.com/minhhoccode111/realworldgo/internal/utils"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -34,29 +34,19 @@ type Service interface {
 		limit, offset int,
 		filter string,
 		isGetAll bool,
-	) ([]*User, error)
-
-	// NOTE: GetUserById and GetUserByEmail have to return User model because sometimes we need password to update user
+	) ([]*model.User, error)
 
 	// SelectUserById returns a user from the database by its ID.
-	SelectUserById(ctx context.Context, id string) (*User, error)
+	SelectUserById(ctx context.Context, id string) (*model.User, error)
+
 	// SelectUserByEmail returns a user from the database by its email.
-	SelectUserByEmail(ctx context.Context, email string) (*User, error)
+	SelectUserByEmail(ctx context.Context, email string) (*model.User, error)
 
 	// InsertUser inserts a new user into the database.
-	InsertUser(ctx context.Context, user *User) error
+	InsertUser(ctx context.Context, user *model.User) error
 
 	// UpdateUser updates the email of a user in the database.
-	UpdateUser(ctx context.Context, userId string, newUser *User) error
-
-	// UpdateUserPassword updates the password of a user in the database.
-	UpdateUserPassword(ctx context.Context, id string, password string) error
-
-	// UpdateUserStatus updates the status of a user in the database.
-	UpdateUserStatus(ctx context.Context, id string, isActive bool) error
-
-	// DeleteUserById deletes a user from the database by its ID.
-	DeleteUserById(ctx context.Context, id string) error
+	UpdateUser(ctx context.Context, userId string, newUser *model.User) error
 }
 
 type service struct {
@@ -154,8 +144,8 @@ func (s *service) CountUsers(ctx context.Context, filter string, isGetAll bool) 
 		`, filter).Scan(&count)
 	}
 	if err != nil {
-		log.Printf("Database error: %v", err)
-		return 0, fmt.Errorf("Datebase error when count users: %v", err)
+		log.Printf("Datebase error when count users: %v", err)
+		return 0, err
 	}
 	return count, nil
 }
@@ -166,7 +156,7 @@ func (s *service) SelectUsers(
 	offset int,
 	filter string,
 	isGetAll bool,
-) ([]*User, error) {
+) ([]*model.User, error) {
 	var rows *sql.Rows
 	var err error
 	if isGetAll {
@@ -184,13 +174,12 @@ func (s *service) SelectUsers(
 		`, filter, limit, offset)
 	}
 	if err != nil {
-		log.Printf("Error select users: %v", err)
-		return nil, fmt.Errorf("Error select users: %v", err)
+		return nil, err
 	}
 	defer rows.Close()
-	var users = []*User{}
+	var users = []*model.User{}
 	for rows.Next() {
-		var user User
+		var user model.User
 		err := rows.Scan(
 			&user.Id,
 			&user.Email,
@@ -198,7 +187,6 @@ func (s *service) SelectUsers(
 			// &user.Role,
 		)
 		if err != nil {
-			log.Printf("Error Scan User: %v", err)
 			return nil, err
 		}
 		users = append(users, &user)
@@ -206,8 +194,8 @@ func (s *service) SelectUsers(
 	return users, nil
 }
 
-func (s *service) SelectUserById(ctx context.Context, userId string) (*User, error) {
-	var user User
+func (s *service) SelectUserById(ctx context.Context, userId string) (*model.User, error) {
+	var user model.User
 	if err := s.db.QueryRowContext(ctx, `
 		select id, email, username, password, bio, image, created_at, updated_at
 		from users where id = $1 `, userId,
@@ -226,8 +214,8 @@ func (s *service) SelectUserById(ctx context.Context, userId string) (*User, err
 	return &user, nil
 }
 
-func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, error) {
-	var user User
+func (s *service) SelectUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	var user model.User
 	if err := s.db.QueryRowContext(ctx, `
 		select id, email, username, password, bio, image, created_at, updated_at
 		from users where email = $1 `, email,
@@ -246,8 +234,8 @@ func (s *service) SelectUserByEmail(ctx context.Context, email string) (*User, e
 	return &user, nil
 }
 
-func (s *service) InsertUser(ctx context.Context, user *User) error {
-	hashedPassword, err := HashedPassword(user.Password)
+func (s *service) InsertUser(ctx context.Context, user *model.User) error {
+	hashedPassword, err := utils.HashedPassword(user.Password)
 	if err != nil {
 		log.Printf("Error hashing %v: %v", user.Password, err)
 		return fmt.Errorf("Error hashing %v: %v", user.Password, err)
@@ -263,16 +251,12 @@ func (s *service) InsertUser(ctx context.Context, user *User) error {
 		user.Bio,
 		user.Image,
 	)
-	// pass generated id back to user
-	if err := row.Scan(&user.Id); err != nil {
-		log.Printf("Error insert user: %v", err)
-		return fmt.Errorf("Error insert user: %v", err)
-	}
-	return nil
+	err = row.Scan(&user.Id)
+	return err
 }
 
-func (s *service) UpdateUser(ctx context.Context, userId string, newUser *User) error {
-	hashedPassword, err := HashedPassword(newUser.Password)
+func (s *service) UpdateUser(ctx context.Context, userId string, newUser *model.User) error {
+	hashedPassword, err := utils.HashedPassword(newUser.Password)
 	if err != nil {
 		log.Printf("Error hashing %v: %v", newUser.Password, err)
 		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
@@ -294,82 +278,4 @@ func (s *service) UpdateUser(ctx context.Context, userId string, newUser *User) 
 		userId,
 	)
 	return err
-}
-
-func (s *service) UpdateUserPassword(ctx context.Context, id string, password string) error {
-	hashedPassword, err := HashedPassword(password)
-	if err != nil {
-		log.Printf("Error hashing password: %v", err)
-		return fmt.Errorf("Error hashing password: %v", err)
-	}
-	result, err := s.db.ExecContext(ctx, `
-		update users
-		set password = $1
-		where id = $2
-		`,
-		hashedPassword,
-		id,
-	)
-	if err != nil {
-		log.Printf("database error when update user password: %v", err)
-		return fmt.Errorf("database error when update user password: %v", err)
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("failed to get rows affected: %v", err)
-		return fmt.Errorf("failed to get rows affected: %v", err)
-	}
-	if rowsAffected == 0 {
-		log.Printf("error when update user password: %v", sql.ErrNoRows)
-		return sql.ErrNoRows
-	}
-	return nil
-}
-
-func (s *service) UpdateUserStatus(ctx context.Context, id string, isActive bool) error {
-	result, err := s.db.ExecContext(ctx, `
-		update users
-		set is_active = $1
-		where id = $2
-		`,
-		isActive,
-		id,
-	)
-	if err != nil {
-		log.Printf("database error update user status: %v", err)
-		return fmt.Errorf("database error update user status: %v", err)
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("failed to get rows affected: %v", err)
-		return fmt.Errorf("failed to get rows affected: %v", err)
-	}
-	if rowsAffected == 0 {
-		log.Printf("error when update user password: %v", sql.ErrNoRows)
-		return sql.ErrNoRows
-	}
-	return nil
-}
-
-func (s *service) DeleteUserById(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx, `
-		delete from users
-		where id = $1
-		`,
-		id,
-	)
-	if err != nil {
-		log.Printf("database error delete user by id: %v", err)
-		return fmt.Errorf("database error delete user by id: %v", err)
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("failed to get rows affected: %v", err)
-		return fmt.Errorf("failed to get rows affected: %v", err)
-	}
-	if rowsAffected == 0 {
-		log.Printf("error when delete user: %v", sql.ErrNoRows)
-		return sql.ErrNoRows
-	}
-	return nil
 }
