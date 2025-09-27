@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/minhhoccode111/realworldgo/internal/middleware"
 	"github.com/minhhoccode111/realworldgo/internal/model"
 	. "github.com/minhhoccode111/realworldgo/internal/utils"
@@ -106,70 +107,59 @@ func (s *Server) websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		User struct {
-			Email    string `json:"email"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"user"`
+		User model.UserRegisterRequest `json:"user"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
 		return
 	}
-	username, err := IsValidUsername(body.User.Username)
+
+	err := body.User.Validate()
 	if err != nil {
-		log.Printf("Input Username Error: %v", err)
-		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
+		log.Printf("UserRegisterRequest model failed validations: %v", err)
+		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
 		return
 	}
-	email, err := IsValidEmail(body.User.Email)
-	if err != nil {
-		log.Printf("Input Email Error: %v", err)
-		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-		return
+
+	// WARN: don't check for uniqueness manually, because race conditions can occur
+	// we must check for uniqueness if error returned after we insert to db
+	// userExisted, err := s.db.SelectUserByEmail(r.Context(), body.User.Email)
+
+	newUser := model.User{
+		Email:    body.User.Email,
+		Username: body.User.Username,
+		Password: body.User.Password,
 	}
-	password, err := IsValidPassword(body.User.Password)
+
+	err = s.db.InsertUser(r.Context(), &newUser)
 	if err != nil {
-		log.Printf("Error: %v", err)
-		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-		return
-	}
-	userExisted, err := s.db.SelectUserByEmail(r.Context(), email)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Error: %v", err)
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			if pgErr.Code == "23505" {
+				WriteJSON(w, http.StatusConflict, JSON{"error": err.Error()})
+				return
+			}
+		}
+
+		log.Printf("Error inserting user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	if userExisted != nil {
-		WriteJSON(w, http.StatusConflict, JSON{"error": "email already existed"})
-		return
-	}
-	user := model.User{
-		Email:    email,
-		Username: username,
-		Password: password,
-	}
-	err = s.db.InsertUser(r.Context(), &user)
+
+	token, err := GenerateJWT(s.config.JWT, newUser.Id)
 	if err != nil {
+		log.Printf("Error generating jwt: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	token, err := GenerateJWT(s.config.JWT, &user)
-	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
-		return
-	}
-	userResponse := user.ToUserResponse(token)
+
+	userResponse := newUser.ToUserResponse(token)
 	WriteJSON(w, http.StatusCreated, JSON{"user": userResponse})
 }
 
 func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		User struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		} `json:"user"`
+		User model.UserLoginRequest `json:"user"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
@@ -183,7 +173,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "email not found"})
 			return
 		}
-		log.Printf("Error: %v", err)
+		log.Printf("Error selecting user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
@@ -191,12 +181,14 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "password incorrect"})
 		return
 	}
-	token, err := GenerateJWT(s.config.JWT, userExisted)
+
+	token, err := GenerateJWT(s.config.JWT, userExisted.Id)
 	if err != nil {
-		log.Printf("Error: %v", err)
+		log.Printf("Error generating jwt: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
+
 	userResponse := userExisted.ToUserResponse(token)
 	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
 }
@@ -207,86 +199,50 @@ func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 		return
 	}
-	token, err := GenerateJWT(s.config.JWT, &user)
+	token, err := GenerateJWT(s.config.JWT, user.Id)
 	if err != nil {
+		log.Printf("Error generating jwt: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
+
 	userResponse := user.ToUserResponse(token)
 	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
 }
 
 func (s *Server) PutUserHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
 	var body struct {
-		User struct {
-			Email    string `json:"email"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-			Bio      string `json:"bio"`
-			Image    string `json:"image"`
-		} `json:"user"`
+		User model.UserUpdateRequest `json:"user"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
 		WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
 		return
 	}
 
-	user, ok := r.Context().Value(CtxUserKey).(model.User)
+	currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
 	if !ok {
 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 		return
 	}
 
-	// ignore empty fields, if field is not empty, it must pass input validation
-	// otherwise, reject whole process
-
-	if body.User.Username != "" {
-		username, err := IsValidUsername(body.User.Username)
-		if err != nil {
-			log.Printf("Input Username Error: %v", err)
-			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-			return
-		}
-		user.Username = username
-	}
-
-	if body.User.Email != "" {
-		email, err := IsValidEmail(body.User.Email)
-		if err != nil {
-			log.Printf("Input Email Error: %v", err)
-			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-			return
-		}
-		user.Email = email
-	}
-
-	if body.User.Password != "" {
-		password, err := IsValidPassword(body.User.Password)
-		if err != nil {
-			log.Printf("Error: %v", err)
-			WriteJSON(w, http.StatusBadRequest, JSON{"error": err.Error()})
-			return
-		}
-		user.Password = password
-	}
-
-	if body.User.Bio != "" {
-		user.Bio = body.User.Bio
-	}
-
-	if body.User.Image != "" {
-		user.Image = body.User.Image
-	}
-
-	err := s.db.UpdateUser(r.Context(), user.Id, &user)
+	err = currentUser.ValidateUserUpdateRequest(&body.User)
 	if err != nil {
-		log.Printf("Error: %v", err)
+		log.Printf("Error validating user update request: %v", err)
+		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
+		return
+	}
+
+	err = s.db.UpdateUser(r.Context(), currentUser.Id, &currentUser)
+	if err != nil {
+		log.Printf("Error updating user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
-	token, err := GenerateJWT(s.config.JWT, &user)
-	userResponse := user.ToUserResponse(token)
+
+	token, err := GenerateJWT(s.config.JWT, currentUser.Id)
+	userResponse := currentUser.ToUserResponse(token)
 	WriteJSON(w, http.StatusOK, JSON{"user": userResponse})
 }
 

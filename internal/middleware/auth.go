@@ -13,6 +13,7 @@ import (
 )
 
 // Authentication middleware
+// TODO: make this authentication middleware allows optional param
 func AuthMiddleware(jwtSecret string, db database.Service) func(http.HandlerFunc) http.HandlerFunc {
 	return func(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

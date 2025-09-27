@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/minhhoccode111/realworldgo/internal/utils"
 )
 
 type User struct {
@@ -25,17 +27,34 @@ func (u *User) ToUserResponse(token string) *UserResponse {
 	}
 }
 
-type UserResponse struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Token    string `json:"token"`
-	Bio      string `json:"bio"`
-	Image    string `json:"image"`
-}
+func (u *User) ValidateUserUpdateRequest(ur *UserUpdateRequest) error {
+	var err error
 
-type ProfileResponse struct {
-	Username  string `json:"username"`
-	Bio       string `json:"bio"`
-	Image     string `json:"image"`
-	Following bool   `json:"following"`
+	// ignore empty fields, if field is not empty, it must pass input validations
+	// otherwise, reject whole process
+
+	if ur.Username != "" {
+		ur.Username, err = utils.IsValidUsername(ur.Username)
+		u.Username = ur.Username
+	}
+
+	if ur.Email != "" {
+		ur.Email, err = utils.IsValidEmail(ur.Email)
+		u.Email = ur.Email
+	}
+
+	if ur.Password != "" {
+		ur.Password, err = utils.IsValidPassword(ur.Password)
+		u.Password = ur.Password
+	}
+
+	if ur.Bio != "" {
+		u.Bio = ur.Bio
+	}
+
+	if ur.Image != "" {
+		u.Image = ur.Image
+	}
+
+	return err
 }

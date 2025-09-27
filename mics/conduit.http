@@ -5,7 +5,7 @@
 @username = minhhoccode111
 @bio = i like golang
 @image = https://www.w3schools.com/howto/img_avatar.png
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk3NTI2NTUsImlhdCI6MTc1ODg4ODY1NSwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjBhOWViNjNjLTZmMjYtNDlhMi1iMWFiLTc1MGNlMGNiYzYzZSJ9.eGWB3xNFKhslLD484C5R3hwzVzqotAOh19mHxzmJuxU
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk4MTgwNjMsImlhdCI6MTc1ODk1NDA2MywiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.-P12arYIG5WtGborejzOgwBckKMOFEjs58Zc_aVoe2A
 @slug = article-slug
 @commentId = 123
 
@@ -69,7 +69,7 @@ Authorization: Token {{token}}
         "title": "How to train your dragon",
         "description": "Ever wonder how?",
         "body": "Very carefully.",
-        "tagList": ["training", "dragons"]
+        "tagList": ["training", "dragons", "tai", "vi", "sao"]
     }
 }
 

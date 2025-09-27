@@ -1,32 +1,28 @@
 package utils
 
 import (
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/minhhoccode111/realworldgo/internal/config"
-	"github.com/minhhoccode111/realworldgo/internal/model"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateJWT(jwtConfig config.JWTConfig, user *model.User) (string, error) {
-	if jwtConfig.Secret == "" {
-		return "", fmt.Errorf("JWT secret cannot be empty")
-	}
+// TODO: use only userId is not so secure
+func GenerateJWT(jwtConfig config.JWTConfig, userId string) (string, error) {
 	secretKey := []byte(jwtConfig.Secret)
-	expirationTime := time.Now().Add(jwtConfig.Expiration).Unix() // Calculate future expiration
+	expirationTime := time.Now().Add(jwtConfig.Expiration).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userId": user.Id,
-		"exp":    expirationTime, // Use the calculated Unix timestamp
+		"userId": userId,
+		"exp":    expirationTime,
 		"iat":    time.Now().Unix(),
 		"iss":    jwtConfig.Issuer,
 	})
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
 		log.Printf("error signing token: %v", err)
-		return "", fmt.Errorf("error signing token: %v", err)
+		return "", err
 	}
 	return tokenString, nil
 }
