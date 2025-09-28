@@ -5,7 +5,7 @@
 @username = minhhoccode111
 @bio = i like golang
 @image = https://www.w3schools.com/howto/img_avatar.png
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk4OTkxNjksImlhdCI6MTc1OTAzNTE2OSwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.k2VN_Oxd_fESNZJrYsMWRyaEmI4PfUMb438XQTFxlZ8
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk5MTUxODEsImlhdCI6MTc1OTA1MTE4MSwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjBhOWViNjNjLTZmMjYtNDlhMi1iMWFiLTc1MGNlMGNiYzYzZSJ9.iYY98NZMFCeaqBsoC1G5fJ44tE7AugYo8V6zFZ_fksM
 @slug = article-slug
 @commentId = 123
 
@@ -48,17 +48,13 @@ Authorization: Token {{token}}
     }
 }
 
-### All Articles
+### All Articles with params
 GET {{api}}/articles
-
-### Articles by Author
-GET {{api}}/articles?author=johnjacob
-
-### Articles Favorited by Username
-GET {{api}}/articles?favorited={{username}}
-
-### Articles by Tag
-GET {{api}}/articles?tag=dragons
+    ?author=johnjacob
+    &favorited={{username}}
+    &tag=dragons
+    &limit=10
+    &offset=0
 
 ### Create Article
 POST {{api}}/articles
@@ -66,10 +62,10 @@ Authorization: Token {{token}}
 
 {
     "article": {
-        "title": "How to train your dragon",
-        "description": "Ever wonder how?",
-        "body": "Very carefully.",
-        "tagList": ["training", "dragons", "tai", "vi", "sao"]
+        "title": "title cannot be empty",
+        "description": "description cannot be empty",
+        "body": "body cannot be empty",
+        "tagList": ["tai", "vi", "sao"]
     }
 }
 

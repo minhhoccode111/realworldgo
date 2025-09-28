@@ -11,6 +11,7 @@ type ctxKey string
 const (
 	CtxUserKey   ctxKey = "user"
 	CtxUserIdKey ctxKey = "userId"
+	CtxIsAuthKey ctxKey = "isAuth"
 )
 
 func WriteText(w http.ResponseWriter, status int, data string) {

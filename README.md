@@ -111,6 +111,7 @@ idx    - name      - unique
 
 - [ ] Add tests with Ginkgo and Gomega
 - [ ] Add cache with Redis
+- [ ] Add notifications with SSE + RabbitMQ + Redis Pub/Sub Architecture
 
 ## MakeFile
 

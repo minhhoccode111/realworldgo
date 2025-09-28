@@ -13,29 +13,50 @@ import (
 )
 
 // Authentication middleware
-// TODO: make this authentication middleware allows optional param
-func AuthMiddleware(jwtSecret string, db database.Service) func(http.HandlerFunc) http.HandlerFunc {
-	return func(handlerFunc http.HandlerFunc) http.HandlerFunc {
+func AuthMiddleware(
+	isOptional bool,
+	jwtSecret string,
+	db database.Service,
+) func(http.HandlerFunc) http.HandlerFunc {
+	return func(hf http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// get authentication header
+			// first set isAuth to false
+			ctx := context.WithValue(r.Context(), CtxIsAuthKey, false)
+
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
+				// in each failure, check if auth is optional, continue if it is
+				if isOptional {
+					hf(w, r.WithContext(ctx))
+					return
+				}
+				// else return immediately
 				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "no authorization header"})
 				return
 			}
+
 			parts := strings.Fields(authHeader)
 			if !strings.EqualFold(parts[0], "Token") {
+				if isOptional {
+					hf(w, r.WithContext(ctx))
+					return
+				}
 				WriteJSON(w, http.StatusUnauthorized,
 					JSON{"error": "authorization header must start with 'Token'"},
 				)
 				return
 			}
 			if len(parts) != 2 {
+				if isOptional {
+					hf(w, r.WithContext(ctx))
+					return
+				}
 				WriteJSON(w, http.StatusUnauthorized,
 					JSON{"error": "authorization header must be formatted as 'Token <token>'"},
 				)
 				return
 			}
+
 			tokenStr := parts[1]
 			token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
 				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -44,33 +65,51 @@ func AuthMiddleware(jwtSecret string, db database.Service) func(http.HandlerFunc
 				return []byte(jwtSecret), nil
 			})
 			if err != nil {
+				if isOptional {
+					hf(w, r.WithContext(ctx))
+					return
+				}
 				log.Printf("Error parsing token: %v", err)
 				WriteJSON(w, http.StatusUnauthorized, JSON{"error": err.Error()})
 				return
 			}
+
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok || !token.Valid {
+				if isOptional {
+					hf(w, r.WithContext(ctx))
+					return
+				}
 				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "invalid token"})
 				return
 			}
+
 			userId, ok := claims[string(CtxUserIdKey)].(string)
 			if !ok || userId == "" {
+				if isOptional {
+					hf(w, r.WithContext(ctx))
+					return
+				}
 				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "missing userId in token"})
 				return
 			}
-			// pass context to database query
+
+			// pass request's context to database query
 			user, err := db.SelectUserById(r.Context(), userId)
 			if err != nil {
-				log.Printf("Error selecting user by id: %v", err)
-				if strings.Contains(err.Error(), "timeout") {
-					WriteJSON(w, http.StatusUnauthorized, JSON{"error": err.Error()})
+				if isOptional {
+					hf(w, r.WithContext(ctx))
 					return
 				}
-				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+				log.Printf("Error selecting user by id: %v", err)
+				WriteJSON(w, http.StatusUnauthorized, JSON{"error": err.Error()})
 				return
 			}
-			ctx := context.WithValue(r.Context(), CtxUserKey, *user)
-			handlerFunc(w, r.WithContext(ctx))
+
+			// at this state, the user is authenticated
+			ctx = context.WithValue(ctx, CtxIsAuthKey, true)
+			ctx = context.WithValue(ctx, CtxUserKey, *user)
+			hf(w, r.WithContext(ctx))
 		}
 	}
 }

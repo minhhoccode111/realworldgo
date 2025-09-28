@@ -41,7 +41,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 func (s *Server) registerV1Routes(r *mux.Router) {
 	// WARN: must define '/articles/feed' before '/articles/{slug}'
 
-	auth := middleware.AuthMiddleware(s.config.JWT.Secret, s.db)
+	auth := middleware.AuthMiddleware(false, s.config.JWT.Secret, s.db)
+	optionalAuth := middleware.AuthMiddleware(true, s.config.JWT.Secret, s.db)
 
 	r.HandleFunc("/websocket", s.websocketHandler)
 
@@ -65,7 +66,7 @@ func (s *Server) registerV1Routes(r *mux.Router) {
 	r.HandleFunc("/articles/{slug}/comments", auth(s.PostCommentsHandler)).Methods("POST")
 	r.HandleFunc("/articles/{slug}/comments/{id}", auth(s.DeleteCommentsHandler)).Methods("DELETE")
 
-	r.HandleFunc("/profiles/{username}", s.GetProfilehandler).Methods("GET")
+	r.HandleFunc("/profiles/{username}", optionalAuth(s.GetProfilehandler)).Methods("GET")
 	r.HandleFunc("/profiles/{username}/follow", auth(s.PostFollowHandler)).Methods("POST")
 	r.HandleFunc("/profiles/{username}/follow", auth(s.DeleteFollowHandler)).Methods("DELETE")
 
