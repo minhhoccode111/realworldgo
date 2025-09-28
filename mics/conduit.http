@@ -1,11 +1,14 @@
 @url = http://localhost:9999
 @api = {{url}}/api/v1
 @email = minhhoccode111@gmail.com
+@email0 = asd0@gmail.com
 @password = Bruh0!0!
 @username = minhhoccode111
+@username0 = asd0
 @bio = i like golang
 @image = https://www.w3schools.com/howto/img_avatar.png
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk5MTUxODEsImlhdCI6MTc1OTA1MTE4MSwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjBhOWViNjNjLTZmMjYtNDlhMi1iMWFiLTc1MGNlMGNiYzYzZSJ9.iYY98NZMFCeaqBsoC1G5fJ44tE7AugYo8V6zFZ_fksM
+@token0 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk5MjE5MDIsImlhdCI6MTc1OTA1NzkwMiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjQ4Y2UzOTAyLWIzZGItNGQxNC1iNGJkLTQyNWIzZmEyNGNmZiJ9.EwtcITJhFz_4DfkM6XhTebHn9whRkZi87rXm8KQ7na8
 @slug = article-slug
 @commentId = 123
 
