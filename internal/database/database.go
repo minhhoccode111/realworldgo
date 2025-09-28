@@ -25,17 +25,6 @@ type Service interface {
 	// It returns an error if the connection cannot be closed.
 	Close(dbName string) error
 
-	// CountUsers returns the number of users in the database for pagination.
-	CountUsers(ctx context.Context, filter string, isGetAll bool) (int, error)
-
-	// SelectUsers returns a slice of users from the database for pagination.
-	SelectUsers(
-		ctx context.Context,
-		limit, offset int,
-		filter string,
-		isGetAll bool,
-	) ([]*model.User, error)
-
 	// SelectUserById returns a user from the database by its ID.
 	SelectUserById(ctx context.Context, id string) (*model.User, error)
 
@@ -129,72 +118,6 @@ func (s *service) Health() map[string]string {
 func (s *service) Close(dbName string) error {
 	log.Printf("Disconnected from database: %s", dbName)
 	return s.db.Close()
-}
-
-func (s *service) CountUsers(ctx context.Context, filter string, isGetAll bool) (int, error) {
-	var count int
-	var err error
-	if isGetAll {
-		err = s.db.QueryRowContext(ctx, `
-		select count(*) from users
-		where email ilike '%' || $1 || '%'
-		`, filter).Scan(&count)
-	} else {
-		err = s.db.QueryRowContext(ctx, `
-		select count(*) from users
-		where email ilike '%' || $1 || '%'
-		and is_active = true
-		`, filter).Scan(&count)
-	}
-	if err != nil {
-		log.Printf("Datebase error when count users: %v", err)
-		return 0, err
-	}
-	return count, nil
-}
-
-func (s *service) SelectUsers(
-	ctx context.Context,
-	limit int,
-	offset int,
-	filter string,
-	isGetAll bool,
-) ([]*model.User, error) {
-	var rows *sql.Rows
-	var err error
-	if isGetAll {
-		rows, err = s.db.QueryContext(ctx, `
-		select id, email, is_active, role from users
-		where email ilike '%' || $1 || '%'
-		limit $2 offset $3
-		`, filter, limit, offset)
-	} else {
-		rows, err = s.db.QueryContext(ctx, `
-		select id, email, is_active, role from users
-		where email ilike '%' || $1 || '%'
-		and is_active = true
-		limit $2 offset $3
-		`, filter, limit, offset)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var users = []*model.User{}
-	for rows.Next() {
-		var user model.User
-		err := rows.Scan(
-			&user.Id,
-			&user.Email,
-			// &user.IsActive,
-			// &user.Role,
-		)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, &user)
-	}
-	return users, nil
 }
 
 func (s *service) SelectUserById(ctx context.Context, userId string) (*model.User, error) {
