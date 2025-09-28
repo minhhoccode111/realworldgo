@@ -234,7 +234,7 @@ func (s *Server) PutUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.db.UpdateUser(r.Context(), currentUser.Id, &currentUser)
+	err = s.db.UpdateUser(r.Context(), &currentUser)
 	if err != nil {
 		log.Printf("Error updating user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})

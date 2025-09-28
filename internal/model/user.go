@@ -32,26 +32,23 @@ func (u *User) ValidateUserUpdateRequest(ur *UserUpdateRequest) (err error) {
 	// otherwise, reject whole process
 
 	if ur.Username != "" {
-		ur.Username, err = utils.IsValidUsername(ur.Username)
-		u.Username = ur.Username
+		u.Username, err = utils.IsValidUsername(ur.Username)
 	}
 
 	if ur.Email != "" {
-		ur.Email, err = utils.IsValidEmail(ur.Email)
-		u.Email = ur.Email
+		u.Email, err = utils.IsValidEmail(ur.Email)
 	}
 
 	if ur.Password != "" {
-		ur.Password, err = utils.IsValidPassword(ur.Password)
-		u.Password = ur.Password
+		u.Password, err = utils.IsValidPassword(ur.Password)
 	}
 
 	if ur.Bio != "" {
-		u.Bio = ur.Bio
+		u.Bio, err = utils.IsNotEmpty(ur.Bio)
 	}
 
 	if ur.Image != "" {
-		u.Image = ur.Image
+		u.Image, err = utils.IsNotEmpty(ur.Image)
 	}
 
 	return err

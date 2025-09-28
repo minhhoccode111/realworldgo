@@ -46,7 +46,7 @@ type Service interface {
 	CreateUser(ctx context.Context, user *model.User) error
 
 	// UpdateUser updates the email of a user in the database.
-	UpdateUser(ctx context.Context, userId string, newUser *model.User) error
+	UpdateUser(ctx context.Context, currentUser *model.User) error
 
 	// CreateArticle inserts a new user into the database.
 	CreateArticle(ctx context.Context, newArticle *model.Article) error
@@ -258,11 +258,11 @@ func (s *service) CreateUser(ctx context.Context, user *model.User) error {
 	return err
 }
 
-func (s *service) UpdateUser(ctx context.Context, userId string, newUser *model.User) error {
-	hashedPassword, err := utils.HashedPassword(newUser.Password)
+func (s *service) UpdateUser(ctx context.Context, currentUser *model.User) error {
+	hashedPassword, err := utils.HashedPassword(currentUser.Password)
 	if err != nil {
-		log.Printf("Error hashing %v: %v", newUser.Password, err)
-		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
+		log.Printf("Error hashing %v: %v", currentUser.Password, err)
+		return fmt.Errorf("Error hashing %v: %v", currentUser.Password, err)
 	}
 	_, err = s.db.ExecContext(ctx, `
 		update users set
@@ -273,12 +273,12 @@ func (s *service) UpdateUser(ctx context.Context, userId string, newUser *model.
 		bio = $5
 		where id = $6
 		`,
-		newUser.Email,
-		newUser.Username,
+		currentUser.Email,
+		currentUser.Username,
 		hashedPassword,
-		newUser.Image,
-		newUser.Bio,
-		userId,
+		currentUser.Image,
+		currentUser.Bio,
+		currentUser.Id,
 	)
 	return err
 }

@@ -24,7 +24,7 @@ func IsValidEmail(email string) (string, error) {
 	if email == "" {
 		return "", fmt.Errorf("email cannot be empty")
 	}
-	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{5,}$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !re.MatchString(email) {
 		return "", fmt.Errorf("invalid email: %v", email)
 	}
