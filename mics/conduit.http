@@ -5,7 +5,7 @@
 @username = minhhoccode111
 @bio = i like golang
 @image = https://www.w3schools.com/howto/img_avatar.png
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk4MTgwNjMsImlhdCI6MTc1ODk1NDA2MywiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.-P12arYIG5WtGborejzOgwBckKMOFEjs58Zc_aVoe2A
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk4OTkxNjksImlhdCI6MTc1OTAzNTE2OSwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.k2VN_Oxd_fESNZJrYsMWRyaEmI4PfUMb438XQTFxlZ8
 @slug = article-slug
 @commentId = 123
 

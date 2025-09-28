@@ -109,7 +109,8 @@ idx    - name      - unique
 
 ## Todo
 
-- [ ] Add tests
+- [ ] Add tests with Ginkgo and Gomega
+- [ ] Add cache with Redis
 
 ## MakeFile
 

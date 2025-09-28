@@ -32,8 +32,16 @@ type ArticlePreviewResponse struct {
 
 // ArticleDetailResponse view an article
 type ArticleDetailResponse struct {
-	ArticlePreviewResponse
-	Body string `json:"body"`
+	Slug           string                 `json:"slug"`
+	Title          string                 `json:"title"`
+	Description    string                 `json:"description"`
+	TagList        []string               `json:"tagList"`
+	CreatedAt      time.Time              `json:"createdAt"`
+	UpdatedAt      time.Time              `json:"updatedAt"`
+	Favorited      bool                   `json:"favorited"`
+	FavoritesCount int                    `json:"favoritesCount"`
+	Author         ProfilePreviewResponse `json:"author"`
+	Body           string                 `json:"body"`
 }
 
 // ArticlesResponse preview a list of articles

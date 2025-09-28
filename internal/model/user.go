@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"github.com/minhhoccode111/realworldgo/internal/utils"
@@ -27,29 +28,48 @@ func (u *User) ToUserResponse(token string) *UserResponse {
 	}
 }
 
+// TODO: receive and userid argument and check if following
+func (u *User) ToProfilePreviewResponse() *ProfilePreviewResponse {
+	return &ProfilePreviewResponse{
+		Username:  u.Username,
+		Bio:       u.Bio,
+		Image:     u.Image,
+		Following: false,
+	}
+}
+
 func (u *User) ValidateUserUpdateRequest(ur *UserUpdateRequest) (err error) {
 	// ignore empty fields, if field is not empty, it must pass input validations
 	// otherwise, reject whole process
 
 	if ur.Username != "" {
 		u.Username, err = utils.IsValidUsername(ur.Username)
+		if err != nil {
+			return err
+		}
 	}
 
 	if ur.Email != "" {
 		u.Email, err = utils.IsValidEmail(ur.Email)
+		if err != nil {
+			return err
+		}
 	}
 
 	if ur.Password != "" {
 		u.Password, err = utils.IsValidPassword(ur.Password)
+		if err != nil {
+			return err
+		}
 	}
 
 	if ur.Bio != "" {
-		u.Bio, err = utils.IsNotEmpty(ur.Bio)
+		u.Bio = strings.TrimSpace(u.Bio)
 	}
 
 	if ur.Image != "" {
-		u.Image, err = utils.IsNotEmpty(ur.Image)
+		u.Image = strings.TrimSpace(u.Image)
 	}
 
-	return err
+	return nil
 }

@@ -276,15 +276,20 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		Title:       body.Article.Title,
 		Body:        body.Article.Body,
 		Description: body.Article.Description,
-		TagList:     body.Article.TagList,
 	}
 
-	err = s.db.CreateArticle(r.Context(), &newArticle)
+	err = s.db.CreateArticle(r.Context(), &newArticle, body.Article.TagList)
 	if err != nil {
 		log.Printf("Error creating article: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
 		return
 	}
+
+	articleResponse := newArticle.ToArticleDetailResponse(
+		*currentUser.ToProfilePreviewResponse(),
+		body.Article.TagList,
+	)
+	WriteJSON(w, http.StatusOK, JSON{"article": articleResponse})
 }
 
 func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {}

@@ -38,7 +38,7 @@ type Service interface {
 	UpdateUser(ctx context.Context, currentUser *model.User) error
 
 	// CreateArticle inserts a new user into the database.
-	CreateArticle(ctx context.Context, newArticle *model.Article) error
+	CreateArticle(ctx context.Context, newArticle *model.Article, tags []string) error
 }
 
 type service struct {
@@ -123,8 +123,8 @@ func (s *service) Close(dbName string) error {
 func (s *service) SelectUserById(ctx context.Context, userId string) (*model.User, error) {
 	var user model.User
 	if err := s.db.QueryRowContext(ctx, `
-		select id, email, username, password, bio, image, created_at, updated_at
-		from users where id = $1 `, userId,
+		SELECT id, email, username, password, bio, image, created_at, updated_at
+		FROM users WHERE id = $1 `, userId,
 	).Scan(
 		&user.Id,
 		&user.Email,
@@ -143,8 +143,8 @@ func (s *service) SelectUserById(ctx context.Context, userId string) (*model.Use
 func (s *service) SelectUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	if err := s.db.QueryRowContext(ctx, `
-		select id, email, username, password, bio, image, created_at, updated_at
-		from users where email = $1 `, email,
+		SELECT id, email, username, password, bio, image, created_at, updated_at
+		FROM users WHERE email = $1 `, email,
 	).Scan(
 		&user.Id,
 		&user.Email,
@@ -167,9 +167,9 @@ func (s *service) CreateUser(ctx context.Context, user *model.User) error {
 		return fmt.Errorf("Error hashing %v: %v", user.Password, err)
 	}
 	row := s.db.QueryRowContext(ctx, `
-		insert into users(email, username, password, bio, image)
-		values($1, $2, $3, $4, $5)
-		returning id
+		INSERT INTO users(email, username, password, bio, image)
+		VALUES($1, $2, $3, $4, $5)
+		RETURNING id
 		`,
 		user.Email,
 		user.Username,
@@ -188,13 +188,13 @@ func (s *service) UpdateUser(ctx context.Context, currentUser *model.User) error
 		return fmt.Errorf("Error hashing %v: %v", currentUser.Password, err)
 	}
 	_, err = s.db.ExecContext(ctx, `
-		update users set
+		UPDATE users SET
 		email = $1,
 		username = $2,
 		password = $3,
 		image = $4,
 		bio = $5
-		where id = $6
+		WHERE id = $6
 		`,
 		currentUser.Email,
 		currentUser.Username,
@@ -206,17 +206,21 @@ func (s *service) UpdateUser(ctx context.Context, currentUser *model.User) error
 	return err
 }
 
-func (s *service) CreateArticle(ctx context.Context, newArticle *model.Article) (err error) {
+func (s *service) CreateArticle(
+	ctx context.Context,
+	newArticle *model.Article,
+	tags []string,
+) (err error) {
 	// 1. insert new article to db to generate id
 	// 2. create a list of tags, will return error if unique constraint fail
 	// 3. create rows in junction table between article and tags
 	// we can apply concurrency for 1. and 2.
-	// and we also need ACID transaction to make sure both succeed
+	// and we also need ACID transaction to make sure every query succeed
 
 	var tx *sql.Tx
 	tx, err = s.db.Begin()
 	if err != nil {
-		return
+		return err
 	}
 
 	// defer a rollback in case of an error or panic
@@ -229,8 +233,65 @@ func (s *service) CreateArticle(ctx context.Context, newArticle *model.Article) 
 		}
 	}()
 
-	// TODO: do something with queries
+	// TODO: add concurrency with goroutines and channels to improve performance
+
+	// insert an article, return its id
+	newArticle.Slug, err = utils.GenerateUniqueSlug(ctx, s.db, newArticle.Title)
+	if err != nil {
+		return err
+	}
+
+	err = s.db.QueryRowContext(ctx, `
+		INSERT INTO articles (author_id, slug, title, description, body)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, updated_at
+		`,
+		newArticle.AuthorId,
+		newArticle.Slug,
+		newArticle.Title,
+		newArticle.Description,
+		newArticle.Body,
+	).Scan(&newArticle.Id, &newArticle.CreatedAt, &newArticle.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	// TODO: if we have large number of tags, we need to use batch insert to improve performance
+	for _, tagName := range tags {
+		// insert or get existing tag
+		var tagId string
+		// `ON CONFLICT (name)`: if insert conflict on `name` col (unique constraint)
+		// `DO UPDATE SET name=EXCLUDED.name`: update the name to the new name (same)
+		// `EXCLUDED`: represent our newly inserted row
+		err := s.db.QueryRowContext(ctx, `
+				INSERT INTO tags (name)
+				VALUES ($1)
+				ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name
+				RETURNING id
+				`, tagName,
+		).Scan(&tagId)
+		if err != nil {
+			return err
+		}
+
+		// insert junction
+		_, err = s.db.ExecContext(ctx, `
+			insert into article_tags (article_id, tag_id)
+			values ($1, $2)
+			on conflict do nothing
+			`,
+			newArticle.Id,
+			tagId,
+		)
+		if err != nil {
+			return err
+		}
+	}
 
 	err = tx.Commit()
-	return
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

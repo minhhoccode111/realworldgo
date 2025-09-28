@@ -14,5 +14,22 @@ type Article struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   time.Time
-	TagList     []string
+}
+
+func (a *Article) ToArticleDetailResponse(
+	author ProfilePreviewResponse,
+	tagList []string,
+) *ArticleDetailResponse {
+	return &ArticleDetailResponse{
+		Slug:           a.Slug,
+		Title:          a.Title,
+		Description:    a.Description,
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
+		Favorited:      false,
+		FavoritesCount: 0,
+		Author:         author,
+		TagList:        tagList,
+		Body:           a.Body,
+	}
 }

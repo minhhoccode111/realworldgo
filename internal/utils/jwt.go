@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// TODO: use only userId is not so secure
+// TODO: use only userId is insecure
 func GenerateJWT(jwtConfig config.JWTConfig, userId string) (string, error) {
 	secretKey := []byte(jwtConfig.Secret)
 	expirationTime := time.Now().Add(jwtConfig.Expiration).Unix()
