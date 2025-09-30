@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/minhhoccode111/realworldgo/internal/model"
 	"github.com/minhhoccode111/realworldgo/internal/utils"
@@ -27,10 +28,7 @@ type Service interface {
 	Close(dbName string) error
 
 	// SelectUserById returns a user from the database by its ID.
-	SelectUserById(ctx context.Context, id string) (*model.User, error)
-
-	// SelectUserByEmail returns a user from the database by its email.
-	SelectUserByEmail(ctx context.Context, email string) (*model.User, error)
+	SelectUser(ctx context.Context, id, email, username string) (*model.User, error)
 
 	// CreateUser inserts a new user into the database.
 	CreateUser(ctx context.Context, newUser *model.User) error
@@ -44,8 +42,11 @@ type Service interface {
 	// CreateArticle inserts a new user into the database.
 	CreateArticle(ctx context.Context, newArticle *model.Article, tags []string) error
 
-	// IsFollowing checks if the follower is following the followingUsername
-	IsFollowing(ctx context.Context, followerId string, followingUsername string) (bool, error)
+	// IsFollowing checks if the follower is following the followingName
+	IsFollowing(ctx context.Context, followerId, followingName string) (bool, error)
+
+	// CreateFollow creates a new follower for the followingUsername
+	CreateFollow(ctx context.Context, followerId, followingUsername string) error
 }
 
 type service struct {
@@ -127,32 +128,31 @@ func (s *service) Close(dbName string) error {
 	return s.db.Close()
 }
 
-func (s *service) SelectUserById(ctx context.Context, userId string) (*model.User, error) {
+func (s *service) SelectUser(ctx context.Context, id, email, username string) (*model.User, error) {
 	var user model.User
-	if err := s.db.QueryRowContext(ctx, `
-		SELECT id, email, username, password, bio, image, created_at, updated_at
-		FROM users WHERE id = $1 `, userId,
-	).Scan(
-		&user.Id,
-		&user.Email,
-		&user.Username,
-		&user.Password,
-		&user.Bio,
-		&user.Image,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	); err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
+	var row *sql.Row
 
-func (s *service) SelectUserByEmail(ctx context.Context, email string) (*model.User, error) {
-	var user model.User
-	if err := s.db.QueryRowContext(ctx, `
+	switch _, err := uuid.Parse(id); err == nil {
+	case true:
+		row = s.db.QueryRowContext(ctx, `
 		SELECT id, email, username, password, bio, image, created_at, updated_at
-		FROM users WHERE email = $1 `, email,
-	).Scan(
+		FROM users WHERE id = $1`, id,
+		)
+	case email != "":
+		row = s.db.QueryRowContext(ctx, `
+		SELECT id, email, username, password, bio, image, created_at, updated_at
+		FROM users WHERE email = $1`, email,
+		)
+	case username != "":
+		row = s.db.QueryRowContext(ctx, `
+		SELECT id, email, username, password, bio, image, created_at, updated_at
+		FROM users WHERE username = $1`, username,
+		)
+	default:
+		return nil, fmt.Errorf("Must provide either id, email or username")
+	}
+
+	if err := row.Scan(
 		&user.Id,
 		&user.Email,
 		&user.Username,
@@ -164,6 +164,7 @@ func (s *service) SelectUserByEmail(ctx context.Context, email string) (*model.U
 	); err != nil {
 		return nil, err
 	}
+
 	return &user, nil
 }
 
@@ -217,9 +218,11 @@ func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) 
 	var existed bool
 	err := s.db.QueryRowContext(ctx, `
 		select exists (
-		select 1 from articles where slug = $1
+			select 1 from articles
+			where slug = $1
 		)
-		`).Scan(&existed)
+		`, slug,
+	).Scan(&existed)
 	if err != nil {
 		return false, err
 	}
@@ -327,11 +330,7 @@ func (s *service) CreateArticle(
 	return nil
 }
 
-func (s *service) IsFollowing(
-	ctx context.Context,
-	followerId string,
-	followingUsername string,
-) (bool, error) {
+func (s *service) IsFollowing(ctx context.Context, followerId, followingName string) (bool, error) {
 	var following bool
 	err := s.db.QueryRowContext(ctx, `
 		select exists (
@@ -343,10 +342,18 @@ func (s *service) IsFollowing(
 			)
 		)`,
 		followerId,
-		followingUsername,
+		followingName,
 	).Scan(&following)
 	if err != nil {
 		return false, err
 	}
 	return following, nil
+}
+
+func (s *service) CreateFollow(
+	ctx context.Context,
+	followerId string,
+	followingUsername string,
+) error {
+	return nil
 }

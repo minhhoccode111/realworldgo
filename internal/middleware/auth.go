@@ -95,7 +95,7 @@ func AuthMiddleware(
 			}
 
 			// pass request's context to database query
-			user, err := db.SelectUserById(r.Context(), userId)
+			user, err := db.SelectUser(r.Context(), userId, "", "")
 			if err != nil {
 				if isOptional {
 					hf(w, r.WithContext(ctx))

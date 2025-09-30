@@ -168,7 +168,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userExisted, err := s.db.SelectUserByEmail(r.Context(), body.User.Email)
+	userExisted, err := s.db.SelectUser(r.Context(), "", body.User.Email, "")
 	if err != nil {
 		if err == sql.ErrNoRows {
 			WriteJSON(w, http.StatusUnauthorized, JSON{"error": "email not found"})
@@ -306,7 +306,52 @@ func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request)    {}
 func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {}
-func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request)     {}
-func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request)     {}
-func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request)   {}
-func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request)        {}
+func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
+	// currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
+	// if !ok {
+	// 	WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+	// 	return
+	// }
+	//
+	// vars := mux.Vars(r)
+	// username, ok := vars["username"]
+	// if !ok {
+	// 	WriteJSON(w, http.StatusBadRequest, JSON{"error": "username not found"})
+	// 	return
+	// }
+}
+
+func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	username, ok := vars["username"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": "username not found"})
+		return
+	}
+
+	err := s.db.CreateFollow(r.Context(), currentUser.Id, username)
+	if err != nil {
+		log.Printf("Error creating follow: %v", err)
+		WriteJSON(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	following, err := s.db.IsFollowing(r.Context(), currentUser.Id, username)
+	if err != nil {
+		log.Printf("Error checking if following: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	profileResponse := currentUser.ToProfilePreviewResponse(following)
+	WriteJSON(w, http.StatusOK, JSON{"profile": profileResponse})
+}
+
+func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request)      {}
