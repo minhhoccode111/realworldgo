@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -307,49 +308,84 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request)    {
 func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
-	// currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
-	// if !ok {
-	// 	WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
-	// 	return
-	// }
-	//
-	// vars := mux.Vars(r)
-	// username, ok := vars["username"]
-	// if !ok {
-	// 	WriteJSON(w, http.StatusBadRequest, JSON{"error": "username not found"})
-	// 	return
-	// }
-}
-
-func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
-	currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
+	follower, ok := r.Context().Value(CtxUserKey).(model.User)
 	if !ok {
 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 		return
 	}
 
 	vars := mux.Vars(r)
-	username, ok := vars["username"]
+	followingUsername, ok := vars["username"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, JSON{"error": "username not found"})
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": "username is required"})
 		return
 	}
 
-	err := s.db.CreateFollow(r.Context(), currentUser.Id, username)
+	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
 	if err != nil {
-		log.Printf("Error creating follow: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			WriteJSON(w, http.StatusNoContent, JSON{"error": "username not found"})
+			return
+		}
+
+		log.Printf("Error selecting following user: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
 		return
 	}
 
-	following, err := s.db.IsFollowing(r.Context(), currentUser.Id, username)
+	following, err := s.db.IsFollowing(r.Context(), follower.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error checking if following: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	profileResponse := currentUser.ToProfilePreviewResponse(following)
+	profileResponse := followingUser.ToProfilePreviewResponse(following)
+	WriteJSON(w, http.StatusOK, JSON{"profile": profileResponse})
+}
+
+func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
+	follower, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	followingUsername, ok := vars["username"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, JSON{"error": "username not found"})
+		return
+	}
+
+	// TODO: implement CreateFollow
+	err := s.db.CreateFollow(r.Context(), follower.Id, followingUsername)
+	if err != nil {
+		log.Printf("Error creating follow: %v", err)
+		WriteJSON(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			WriteJSON(w, http.StatusNoContent, JSON{"error": "username not found"})
+			return
+		}
+
+		log.Printf("Error selecting following user: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, JSON{"error": err.Error()})
+		return
+	}
+
+	following, err := s.db.IsFollowing(r.Context(), follower.Id, followingUsername)
+	if err != nil {
+		log.Printf("Error checking if following: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	profileResponse := followingUser.ToProfilePreviewResponse(following)
 	WriteJSON(w, http.StatusOK, JSON{"profile": profileResponse})
 }
 

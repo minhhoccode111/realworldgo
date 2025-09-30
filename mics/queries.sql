@@ -40,13 +40,12 @@ where t.name = 'tai';
 -- check if a user (id) follows another user (username)
 select exists (
   select 1 from follows
-  where follower_id = '7c6ecf9d-0c0d-43f7-959f-f397706a760e'
+  where follower_id = 'd89b1945-3193-435d-90c6-b6da95317893'
   and following_id = (
     select id from users
-    where username = 'minhhoccode111'
+    where username = 'asd0'
   )
 );
-
 
 -- a user follow another user by username
 insert into follows (follower_id, following_id)

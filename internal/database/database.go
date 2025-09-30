@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/minhhoccode111/realworldgo/internal/model"
 	"github.com/minhhoccode111/realworldgo/internal/utils"
@@ -132,8 +131,8 @@ func (s *service) SelectUser(ctx context.Context, id, email, username string) (*
 	var user model.User
 	var row *sql.Row
 
-	switch _, err := uuid.Parse(id); err == nil {
-	case true:
+	switch {
+	case id != "":
 		row = s.db.QueryRowContext(ctx, `
 		SELECT id, email, username, password, bio, image, created_at, updated_at
 		FROM users WHERE id = $1`, id,
@@ -350,6 +349,7 @@ func (s *service) IsFollowing(ctx context.Context, followerId, followingName str
 	return following, nil
 }
 
+// TODO:
 func (s *service) CreateFollow(
 	ctx context.Context,
 	followerId string,
