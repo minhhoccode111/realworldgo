@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gosimple/slug"
 	"github.com/minhhoccode111/realworldgo/internal/model"
 	"github.com/minhhoccode111/realworldgo/internal/utils"
 
@@ -32,10 +33,13 @@ type Service interface {
 	SelectUserByEmail(ctx context.Context, email string) (*model.User, error)
 
 	// CreateUser inserts a new user into the database.
-	CreateUser(ctx context.Context, user *model.User) error
+	CreateUser(ctx context.Context, newUser *model.User) error
 
 	// UpdateUser updates the email of a user in the database.
-	UpdateUser(ctx context.Context, currentUser *model.User) error
+	UpdateUser(ctx context.Context, newUser *model.User) error
+
+	// IsSlugExisted checks if an article with the given slug already exists in the database
+	IsSlugExisted(ctx context.Context, slug string) (bool, error)
 
 	// CreateArticle inserts a new user into the database.
 	CreateArticle(ctx context.Context, newArticle *model.Article, tags []string) error
@@ -160,32 +164,32 @@ func (s *service) SelectUserByEmail(ctx context.Context, email string) (*model.U
 	return &user, nil
 }
 
-func (s *service) CreateUser(ctx context.Context, user *model.User) error {
-	hashedPassword, err := utils.HashedPassword(user.Password)
+func (s *service) CreateUser(ctx context.Context, newUser *model.User) error {
+	hashedPassword, err := utils.HashedPassword(newUser.Password)
 	if err != nil {
-		log.Printf("Error hashing %v: %v", user.Password, err)
-		return fmt.Errorf("Error hashing %v: %v", user.Password, err)
+		log.Printf("Error hashing %v: %v", newUser.Password, err)
+		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
 	}
 	row := s.db.QueryRowContext(ctx, `
 		INSERT INTO users(email, username, password, bio, image)
 		VALUES($1, $2, $3, $4, $5)
 		RETURNING id
 		`,
-		user.Email,
-		user.Username,
+		newUser.Email,
+		newUser.Username,
 		hashedPassword,
-		user.Bio,
-		user.Image,
+		newUser.Bio,
+		newUser.Image,
 	)
-	err = row.Scan(&user.Id)
+	err = row.Scan(&newUser.Id)
 	return err
 }
 
-func (s *service) UpdateUser(ctx context.Context, currentUser *model.User) error {
-	hashedPassword, err := utils.HashedPassword(currentUser.Password)
+func (s *service) UpdateUser(ctx context.Context, newUser *model.User) error {
+	hashedPassword, err := utils.HashedPassword(newUser.Password)
 	if err != nil {
-		log.Printf("Error hashing %v: %v", currentUser.Password, err)
-		return fmt.Errorf("Error hashing %v: %v", currentUser.Password, err)
+		log.Printf("Error hashing %v: %v", newUser.Password, err)
+		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
 	}
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE users SET
@@ -196,14 +200,27 @@ func (s *service) UpdateUser(ctx context.Context, currentUser *model.User) error
 		bio = $5
 		WHERE id = $6
 		`,
-		currentUser.Email,
-		currentUser.Username,
+		newUser.Email,
+		newUser.Username,
 		hashedPassword,
-		currentUser.Image,
-		currentUser.Bio,
-		currentUser.Id,
+		newUser.Image,
+		newUser.Bio,
+		newUser.Id,
 	)
 	return err
+}
+
+func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) {
+	var existed bool
+	err := s.db.QueryRowContext(ctx, `
+		select exists (
+		select id from articles where slug = $1
+		)
+		`).Scan(&existed)
+	if err != nil {
+		return false, err
+	}
+	return existed, nil
 }
 
 func (s *service) CreateArticle(
@@ -236,9 +253,20 @@ func (s *service) CreateArticle(
 	// TODO: add concurrency with goroutines and channels to improve performance
 
 	// insert an article, return its id
-	newArticle.Slug, err = utils.GenerateUniqueSlug(ctx, s.db, newArticle.Title)
-	if err != nil {
-		return err
+	baseSlug := slug.Make(newArticle.Title)
+	newArticle.Slug = baseSlug
+	for i := 0; ; i++ {
+		var existed bool
+		existed, err = s.IsSlugExisted(ctx, newArticle.Slug)
+		if err != nil {
+			return err
+		}
+
+		if !existed {
+			break
+		}
+
+		newArticle.Slug = baseSlug + "-" + strconv.Itoa(i)
 	}
 
 	err = s.db.QueryRowContext(ctx, `
