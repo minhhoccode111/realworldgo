@@ -28,13 +28,12 @@ func (u *User) ToUserResponse(token string) *UserResponse {
 	}
 }
 
-// TODO: receive and userid argument and check if following
-func (u *User) ToProfilePreviewResponse() *ProfilePreviewResponse {
+func (u *User) ToProfilePreviewResponse(following bool) *ProfilePreviewResponse {
 	return &ProfilePreviewResponse{
 		Username:  u.Username,
 		Bio:       u.Bio,
 		Image:     u.Image,
-		Following: false,
+		Following: following,
 	}
 }
 

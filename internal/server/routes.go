@@ -286,8 +286,11 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var following bool
+	following, err = s.db.IsFollowing(r.Context(), currentUser.Id, currentUser.Username)
+
 	articleResponse := newArticle.ToArticleDetailResponse(
-		*currentUser.ToProfilePreviewResponse(),
+		*currentUser.ToProfilePreviewResponse(following),
 		body.Article.TagList,
 	)
 	WriteJSON(w, http.StatusOK, JSON{"article": articleResponse})

@@ -43,6 +43,9 @@ type Service interface {
 
 	// CreateArticle inserts a new user into the database.
 	CreateArticle(ctx context.Context, newArticle *model.Article, tags []string) error
+
+	// IsFollowing checks if the follower is following the followingUsername
+	IsFollowing(ctx context.Context, followerId string, followingUsername string) (bool, error)
 }
 
 type service struct {
@@ -214,7 +217,7 @@ func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) 
 	var existed bool
 	err := s.db.QueryRowContext(ctx, `
 		select exists (
-		select id from articles where slug = $1
+		select 1 from articles where slug = $1
 		)
 		`).Scan(&existed)
 	if err != nil {
@@ -322,4 +325,28 @@ func (s *service) CreateArticle(
 	}
 
 	return nil
+}
+
+func (s *service) IsFollowing(
+	ctx context.Context,
+	followerId string,
+	followingUsername string,
+) (bool, error) {
+	var following bool
+	err := s.db.QueryRowContext(ctx, `
+		select exists (
+			select 1 from follows
+			where follower_id = $1
+			and following_id = (
+				select id from users
+				where username = $2
+			)
+		)`,
+		followerId,
+		followingUsername,
+	).Scan(&following)
+	if err != nil {
+		return false, err
+	}
+	return following, nil
 }
