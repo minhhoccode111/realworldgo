@@ -53,3 +53,8 @@ values (
   'd89b1945-3193-435d-90c6-b6da95317893',
   (select id from users where username = 'minhhoccode111')
 );
+
+-- a user unfollow another user by username
+delete from follows
+where follower_id = (select id from users where username = 'asd0')
+and following_id = (select id from users where username = 'minhhoccode111');

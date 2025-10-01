@@ -358,7 +358,6 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: implement CreateFollow
 	err := s.db.CreateFollow(r.Context(), follower.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error creating follow: %v", err)

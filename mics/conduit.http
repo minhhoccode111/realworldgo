@@ -140,8 +140,8 @@ GET {{api}}/profiles/{{username0}}
 Authorization: Token {{token}}
 
 ### Follow Profile
-POST {{api}}/profiles/{{username}}/follow
-Authorization: Token {{token0}}
+POST {{api}}/profiles/{{username0}}/follow
+Authorization: Token {{token}}
 
 ### Unfollow Profile
 DELETE {{api}}/profiles/{{username}}/follow

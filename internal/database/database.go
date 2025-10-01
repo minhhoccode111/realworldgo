@@ -349,11 +349,23 @@ func (s *service) IsFollowing(ctx context.Context, followerId, followingName str
 	return following, nil
 }
 
-// TODO:
 func (s *service) CreateFollow(
 	ctx context.Context,
 	followerId string,
 	followingUsername string,
 ) error {
+	_, err := s.db.ExecContext(ctx, `
+		insert into follows (follower_id, following_id)
+		values (
+			$1,
+			(select id from users where username = $2)
+		)`,
+		followerId,
+		followingUsername,
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
