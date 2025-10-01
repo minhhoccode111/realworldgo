@@ -144,7 +144,7 @@ POST {{api}}/profiles/{{username0}}/follow
 Authorization: Token {{token}}
 
 ### Unfollow Profile
-DELETE {{api}}/profiles/{{username}}/follow
+DELETE {{api}}/profiles/{{username0}}/follow
 Authorization: Token {{token}}
 
 ### All Tags

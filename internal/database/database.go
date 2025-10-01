@@ -46,6 +46,9 @@ type Service interface {
 
 	// CreateFollow creates a new follower for the followingUsername
 	CreateFollow(ctx context.Context, followerId, followingUsername string) error
+
+	// DeleteFollow deletes a follower for the followingUsername
+	DeleteFollow(ctx context.Context, followerId, followingUsername string) error
 }
 
 type service struct {
@@ -359,6 +362,30 @@ func (s *service) CreateFollow(
 		values (
 			$1,
 			(select id from users where username = $2)
+		)
+		on conflict do nothing
+		`,
+		followerId,
+		followingUsername,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) DeleteFollow(
+	ctx context.Context,
+	followerId string,
+	followingUsername string,
+) error {
+	_, err := s.db.ExecContext(ctx, `
+		delete from follows
+		where follower_id = $1
+		and following_id = (
+			select id from users
+			where username = $2
 		)`,
 		followerId,
 		followingUsername,
