@@ -38,6 +38,13 @@ type Service interface {
 	// IsSlugExisted checks if an article with the given slug already exists in the database
 	IsSlugExisted(ctx context.Context, slug string) (bool, error)
 
+	// SelectArticles returns a list of articles from the database
+	SelectArticles(
+		ctx context.Context,
+		currentUserId, tag, author, favorited string,
+		limit, offset int,
+	) (articlesResponse *model.ArticlesResponse, articlesCount int, err error)
+
 	// CreateArticle inserts a new user into the database.
 	CreateArticle(ctx context.Context, newArticle *model.Article, tags []string) error
 
@@ -229,6 +236,14 @@ func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) 
 		return false, err
 	}
 	return existed, nil
+}
+
+func (s *service) SelectArticles(
+	ctx context.Context,
+	currentUserId, tag, author, favorited string,
+	limit, offset int,
+) (articlesResponse *model.ArticlesResponse, articlesCount int, err error) {
+	return
 }
 
 func (s *service) CreateArticle(

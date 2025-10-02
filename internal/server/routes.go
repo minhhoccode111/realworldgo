@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/minhhoccode111/realworldgo/internal/middleware"
 	"github.com/minhhoccode111/realworldgo/internal/model"
+	"github.com/minhhoccode111/realworldgo/internal/utils"
 	. "github.com/minhhoccode111/realworldgo/internal/utils"
 
 	"github.com/gorilla/mux"
@@ -54,7 +55,7 @@ func (s *Server) registerV1Routes(r *mux.Router) {
 	r.HandleFunc("/user", auth(s.PutUserHandler)).Methods("PUT")
 
 	r.HandleFunc("/articles", auth(s.PostArticleHandler)).Methods("POST")
-	r.HandleFunc("/articles", s.GetAllArticlesHandler).Methods("GET")
+	r.HandleFunc("/articles", optionalAuth(s.GetAllArticlesHandler)).Methods("GET")
 	r.HandleFunc("/articles/feed", auth(s.GetFeedHandler)).Methods("GET")
 	r.HandleFunc("/articles/{slug}", s.GetArticleHandler).Methods("GET")
 	r.HandleFunc("/articles/{slug}", auth(s.PutArticleHandler)).Methods("PUT")
@@ -297,7 +298,44 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, JSON{"article": articleResponse})
 }
 
-func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
+	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
+	currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok && isAuth {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+
+	var currentUserId string
+	if isAuth {
+		currentUserId = currentUser.Id
+	}
+
+	tag, author, favorited, limit, offset := utils.SearchQueries(w, r)
+
+	articlesResponse, articlesCount, err := s.db.SelectArticles(
+		r.Context(),
+		currentUserId,
+		tag,
+		author,
+		favorited,
+		limit,
+		offset,
+	)
+	if err != nil {
+		log.Printf("")
+		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, JSON{
+		"articles":      articlesResponse,
+		"articlesCount": articlesCount,
+	})
+
+	// WARN: the N+1 problem can arise, because we have to query current user profile's relation with each article's author profile
+}
+
 func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request)        {}
 func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request)     {}
 func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request)     {}
