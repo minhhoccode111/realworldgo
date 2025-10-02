@@ -105,7 +105,13 @@ idx    - name      - unique
 - Follow User vs. User: Many-to-Many
 - Favorite User vs. Article: Many-to-Many
 
-## Concepts
+## Concepts Learned
+
+- N+1 Problem
+- `where id::text = '...'`
+- `select exists (select 1 from tags where name = 'ts');`
+- `CROSS JOIN`
+- `LEFT JOIN`
 
 ## Todo
 

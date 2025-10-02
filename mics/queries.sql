@@ -58,3 +58,47 @@ values (
 delete from follows
 where follower_id = (select id from users where username = 'asd0')
 and following_id = (select id from users where username = 'minhhoccode111');
+
+-- generate fake data by letting a user favorite all articles
+insert into favorites (user_id, article_id)
+select u.id, a.id
+from users u
+cross join articles a
+where u.username = 'minhhoccode111';
+
+-- generate fake data by letting a user favorite all articles of other users except itself
+insert into favorites (user_id, article_id)
+select u.id, a.id
+from users u
+cross join articles a
+where u.username = 'asd0' and a.author_id != u.id;
+
+-- count duplicated title articles
+SELECT title, COUNT(*) AS count_articles
+FROM articles
+WHERE deleted_at IS NULL
+GROUP BY title
+ORDER BY count_articles DESC;
+
+--------------------------------------------------------------------------------
+-- list articles, filter by tags, author, favorited, limit, offset
+-- and return multiple articles with their tags and author profile
+-- ordered by most recent first and doesn't have deleted_at
+
+-- unauthenticated users
+select a.slug, a.title, a.description, a.created_at, a.updated_at, false as favorited,
+  u.username as author, u.bio, false as following,
+  array_agg(t.name) as tags
+from articles a
+left join users u on a.author_id = u.id
+left join article_tags at on at.article_id = a.id
+left join tags t on t.id = at.tag_id
+where deleted_at is null
+group by a.slug, a.title, a.description, a.created_at, a.updated_at, author, u.bio
+order by a.created_at desc
+limit 20
+offset 0;
+-- TODO: count favorites and group by it
+
+-- authenticated users
+--------------------------------------------------------------------------------
