@@ -308,8 +308,9 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request)    {
 func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
+	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
 	follower, ok := r.Context().Value(CtxUserKey).(model.User)
-	if !ok {
+	if !ok && isAuth {
 		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
 		return
 	}
@@ -333,14 +334,20 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	following, err := s.db.IsFollowing(r.Context(), follower.Id, followingUsername)
-	if err != nil {
-		log.Printf("Error checking if following: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, err.Error())
+	if isAuth {
+		following, err := s.db.IsFollowing(r.Context(), follower.Id, followingUsername)
+		if err != nil {
+			log.Printf("Error checking if following: %v", err)
+			WriteJSON(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		profileResponse := followingUser.ToProfilePreviewResponse(following)
+		WriteJSON(w, http.StatusOK, JSON{"profile": profileResponse})
 		return
 	}
 
-	profileResponse := followingUser.ToProfilePreviewResponse(following)
+	profileResponse := followingUser.ToProfilePreviewResponse(false)
 	WriteJSON(w, http.StatusOK, JSON{"profile": profileResponse})
 }
 
