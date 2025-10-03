@@ -313,7 +313,7 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 
 	tag, author, favorited, limit, offset := utils.SearchQueries(w, r)
 
-	articlesResponse, articlesCount, err := s.db.SelectArticles(
+	ar, err := s.db.SelectArticles(
 		r.Context(),
 		currentUserId,
 		tag,
@@ -328,12 +328,8 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, JSON{
-		"articles":      articlesResponse,
-		"articlesCount": articlesCount,
-	})
-
-	// WARN: the N+1 problem can arise, because we have to query current user profile's relation with each article's author profile
+	// FIX: duplicate tag in tags list
+	WriteJSON(w, http.StatusOK, *ar)
 }
 
 func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request)        {}

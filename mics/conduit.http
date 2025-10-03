@@ -51,13 +51,27 @@ Authorization: Token {{token}}
     }
 }
 
+### All Articles with auth
+GET {{api}}/articles
+
 ### All Articles with params
 GET {{api}}/articles
-    ?author=johnjacob
-    &favorited={{username}}
-    &tag=dragons
+    ?author={{username}}
+Authorization: Token {{token}}
+
+### All Articles with params
+GET {{api}}/articles
+    ?favorited={{username}}
+Authorization: Token {{token}}
+
+### All Articles with params
+GET {{api}}/articles
+    ?author=
+    &favorited=
+    &tag=
     &limit=10
     &offset=0
+Authorization: Token {{token}}
 
 ### Create Article
 POST {{api}}/articles
