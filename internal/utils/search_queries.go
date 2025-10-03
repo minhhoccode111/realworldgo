@@ -24,5 +24,5 @@ func SearchQueries(w http.ResponseWriter, r *http.Request) (string, string, stri
 		limit = 20
 	}
 
-	return tag, author, favorited, offset, limit
+	return tag, author, favorited, limit, offset
 }
