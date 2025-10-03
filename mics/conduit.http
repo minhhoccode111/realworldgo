@@ -68,7 +68,7 @@ Authorization: Token {{token}}
         "title": "title cannot be empty",
         "description": "description cannot be empty",
         "body": "body cannot be empty",
-        "tagList": ["tai", "vi", "sao"]
+        "tagList": []
     }
 }
 

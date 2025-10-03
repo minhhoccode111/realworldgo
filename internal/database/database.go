@@ -243,6 +243,9 @@ func (s *service) SelectArticles(
 	currentUserId, tag, author, favorited string,
 	limit, offset int,
 ) (articlesResponse *model.ArticlesResponse, articlesCount int, err error) {
+	// TODO:
+	// filter articles
+	// and count all articles using using conccurency
 	return
 }
 

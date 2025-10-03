@@ -80,25 +80,62 @@ WHERE deleted_at IS NULL
 GROUP BY title
 ORDER BY count_articles DESC;
 
+-- count favorites of articles
+select a.slug, count(*) as favorites_count
+from articles a
+left join favorites f on f.article_id = a.id
+group by a.slug
+order by favorites_count desc;
+
 --------------------------------------------------------------------------------
 -- list articles, filter by tags, author, favorited, limit, offset
 -- and return multiple articles with their tags and author profile
 -- ordered by most recent first and doesn't have deleted_at
 
--- unauthenticated users
+-- basic with unauthenticated users
 select a.slug, a.title, a.description, a.created_at, a.updated_at, false as favorited,
-  u.username as author, u.bio, false as following,
-  array_agg(t.name) as tags
+  u.username, u.bio, false as following,
+  array_agg(t.name) filter (where t.name is not null) as tags,
+  count(distinct f.user_id) as favorites_count
 from articles a
 left join users u on a.author_id = u.id
 left join article_tags at on at.article_id = a.id
 left join tags t on t.id = at.tag_id
-where deleted_at is null
-group by a.slug, a.title, a.description, a.created_at, a.updated_at, author, u.bio
+left join favorites f on f.article_id = a.id
+where a.deleted_at is null
+group by a.id, u.id
 order by a.created_at desc
 limit 20
 offset 0;
--- TODO: count favorites and group by it
 
--- authenticated users
---------------------------------------------------------------------------------
+-- advanced with authenticated users
+-- explain: authenticated user: minhhoccode111, id = 'd89b1945-3193-435d-90c6-b6da95317893'
+-- filter all articles written by 'asd0' and favorited by 'minhhoccode111' and have tag 'sao'
+-- NOTE: this hurt my brain bruh
+select a.slug, a.title, a.description, a.created_at, a.updated_at,
+  (select exists
+    (select 1 from favorites where user_id = 'd89b1945-3193-435d-90c6-b6da95317893' and article_id = a.id)
+  ) as favorited,
+  u.username, u.bio, u.image,
+  (select exists
+    (select 1 from follows where follower_id = 'd89b1945-3193-435d-90c6-b6da95317893' and following_id = u.id)
+  ) as following,
+  array_agg(t.name) filter (where t.name is not null) as tags,
+  count(distinct f.user_id) as favorites_count,
+  count(*) over() as articles_count -- count all articles after filtering and before applying limit
+from articles a
+left join users u on a.author_id = u.id
+left join article_tags at on at.article_id = a.id
+left join tags t on t.id = at.tag_id
+left join favorites f on f.article_id = a.id
+left join users uf on f.user_id = uf.id
+where a.deleted_at is null
+  and ('asd0' = '' or u.username = 'asd0') -- filter by author username, skip if empty string
+  and ('minhhoccode111' = '' or uf.username = 'minhhoccode111') -- filter by favorited username, skip if empty string
+  and ('sao' = '' or exists (select 1 from article_tags at2
+      left join tags t2 on at2.tag_id = t2.id
+      where at2.article_id = a.id and t2.name = 'sao')) -- filter by tag, skip if empty string
+group by a.id, u.id
+order by a.created_at desc
+limit 20
+offset 0;
