@@ -10,8 +10,8 @@ import (
 
 	"github.com/gosimple/slug"
 	"github.com/lib/pq"
-	"github.com/minhhoccode111/realworldgo/internal/model"
-	"github.com/minhhoccode111/realworldgo/internal/utils"
+	. "github.com/minhhoccode111/realworldgo/internal/model"
+	. "github.com/minhhoccode111/realworldgo/internal/utils"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -28,13 +28,13 @@ type Service interface {
 	Close(dbName string) error
 
 	// SelectUserById returns a user from the database by its ID.
-	SelectUser(ctx context.Context, id, email, username string) (*model.User, error)
+	SelectUser(ctx context.Context, id, email, username string) (*User, error)
 
 	// CreateUser inserts a new user into the database.
-	CreateUser(ctx context.Context, newUser *model.User) error
+	CreateUser(ctx context.Context, newUser *User) error
 
 	// UpdateUser updates the email of a user in the database.
-	UpdateUser(ctx context.Context, newUser *model.User) error
+	UpdateUser(ctx context.Context, newUser *User) error
 
 	// IsSlugExisted checks if an article with the given slug already exists in the database
 	IsSlugExisted(ctx context.Context, slug string) (bool, error)
@@ -44,17 +44,17 @@ type Service interface {
 		ctx context.Context,
 		currentUserId, tag, author, favorited string,
 		limit, offset int,
-	) (*model.ArticlesResponse, error)
+	) (articles []ArticlePreview, articlesCount int, err error)
 
-	// SelectArticles returns a list of articles from the database
+	// SelectArticlesFeed returns a list of articles from the database
 	SelectArticlesFeed(
 		ctx context.Context,
 		currentUserId string,
 		limit, offset int,
-	) (*model.ArticlesResponse, error)
+	) (articles []ArticlePreview, articlesCount int, err error)
 
 	// CreateArticle inserts a new user into the database.
-	CreateArticle(ctx context.Context, newArticle *model.Article, tags []string) error
+	CreateArticle(ctx context.Context, newArticle *Article, tags []string) error
 
 	// IsFollowing checks if the follower is following the followingName
 	IsFollowing(ctx context.Context, followerId, followingName string) (bool, error)
@@ -145,8 +145,8 @@ func (s *service) Close(dbName string) error {
 	return s.db.Close()
 }
 
-func (s *service) SelectUser(ctx context.Context, id, email, username string) (*model.User, error) {
-	var user model.User
+func (s *service) SelectUser(ctx context.Context, id, email, username string) (*User, error) {
+	var user User
 	var row *sql.Row
 
 	switch {
@@ -185,8 +185,8 @@ func (s *service) SelectUser(ctx context.Context, id, email, username string) (*
 	return &user, nil
 }
 
-func (s *service) CreateUser(ctx context.Context, newUser *model.User) error {
-	hashedPassword, err := utils.HashedPassword(newUser.Password)
+func (s *service) CreateUser(ctx context.Context, newUser *User) error {
+	hashedPassword, err := HashedPassword(newUser.Password)
 	if err != nil {
 		log.Printf("Error hashing %v: %v", newUser.Password, err)
 		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
@@ -206,8 +206,8 @@ func (s *service) CreateUser(ctx context.Context, newUser *model.User) error {
 	return err
 }
 
-func (s *service) UpdateUser(ctx context.Context, newUser *model.User) error {
-	hashedPassword, err := utils.HashedPassword(newUser.Password)
+func (s *service) UpdateUser(ctx context.Context, newUser *User) error {
+	hashedPassword, err := HashedPassword(newUser.Password)
 	if err != nil {
 		log.Printf("Error hashing %v: %v", newUser.Password, err)
 		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
@@ -250,7 +250,7 @@ func (s *service) SelectArticles(
 	ctx context.Context,
 	currentUserId, tag, author, favorited string,
 	limit, offset int,
-) (*model.ArticlesResponse, error) {
+) (articles []ArticlePreview, articlesCount int, err error) {
 	query := `
 		select a.slug, a.title, a.description, a.created_at, a.updated_at,
 		  (select exists
@@ -299,14 +299,12 @@ func (s *service) SelectArticles(
 		offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var ar model.ArticlesResponse
-	ar.Articles = []model.ArticlePreviewResponse{}
 	for rows.Next() {
-		var a model.ArticlePreviewResponse
+		var a ArticlePreview
 		var tags pq.StringArray
 		err = rows.Scan(
 			&a.Slug,
@@ -321,30 +319,28 @@ func (s *service) SelectArticles(
 			&a.Author.Following,
 			&tags,
 			&a.FavoritesCount,
-			&ar.ArticlesCount,
+			&articlesCount,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		a.TagList = []string(tags)
-		ar.Articles = append(ar.Articles, a)
+		articles = append(articles, a)
 	}
 
 	err = rows.Err()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	ar.Limit = limit
-	ar.Offset = offset
-	return &ar, nil
+	return articles, articlesCount, nil
 }
 
 func (s *service) SelectArticlesFeed(
 	ctx context.Context,
 	currentUserId string,
 	limit, offset int,
-) (*model.ArticlesResponse, error) {
+) (articles []ArticlePreview, articlesCount int, err error) {
 	query := `
 		select a.slug, a.title, a.description, a.created_at, a.updated_at,
 		  (select exists
@@ -386,14 +382,12 @@ func (s *service) SelectArticlesFeed(
 		offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var ar model.ArticlesResponse
-	ar.Articles = []model.ArticlePreviewResponse{}
 	for rows.Next() {
-		var a model.ArticlePreviewResponse
+		var a ArticlePreview
 		var tags pq.StringArray
 		err = rows.Scan(
 			&a.Slug,
@@ -408,29 +402,27 @@ func (s *service) SelectArticlesFeed(
 			// &a.Author.Following,
 			&tags,
 			&a.FavoritesCount,
-			&ar.ArticlesCount,
+			&articlesCount,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		a.TagList = []string(tags)
 		a.Author.Following = true
-		ar.Articles = append(ar.Articles, a)
+		articles = append(articles, a)
 	}
 
 	err = rows.Err()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	ar.Limit = limit
-	ar.Offset = offset
-	return &ar, nil
+	return nil, 0, err
 }
 
 func (s *service) CreateArticle(
 	ctx context.Context,
-	newArticle *model.Article,
+	newArticle *Article,
 	tags []string,
 ) (err error) {
 	// 1. insert new article to db to generate id

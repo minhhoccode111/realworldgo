@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-type JSON map[string]any
 type ctxKey string
 
 const (

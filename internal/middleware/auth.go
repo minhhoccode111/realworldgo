@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/minhhoccode111/realworldgo/internal/database"
+	"github.com/minhhoccode111/realworldgo/internal/model"
 	. "github.com/minhhoccode111/realworldgo/internal/utils"
 )
 
@@ -31,7 +32,11 @@ func AuthMiddleware(
 					return
 				}
 				// else return immediately
-				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "no authorization header"})
+				WriteJSON(
+					w,
+					http.StatusUnauthorized,
+					model.ErrorResponse{Error: "no authorization header"},
+				)
 				return
 			}
 
@@ -42,7 +47,7 @@ func AuthMiddleware(
 					return
 				}
 				WriteJSON(w, http.StatusUnauthorized,
-					JSON{"error": "authorization header must start with 'Token'"},
+					model.ErrorResponse{Error: "authorization header must start with 'Token'"},
 				)
 				return
 			}
@@ -51,8 +56,12 @@ func AuthMiddleware(
 					hf(w, r.WithContext(ctx))
 					return
 				}
-				WriteJSON(w, http.StatusUnauthorized,
-					JSON{"error": "authorization header must be formatted as 'Token <token>'"},
+				WriteJSON(
+					w,
+					http.StatusUnauthorized,
+					model.ErrorResponse{
+						Error: "authorization header must be formatted as 'Token <token>'",
+					},
 				)
 				return
 			}
@@ -70,7 +79,7 @@ func AuthMiddleware(
 					return
 				}
 				log.Printf("Error parsing token: %v", err)
-				WriteJSON(w, http.StatusUnauthorized, JSON{"error": err.Error()})
+				WriteJSON(w, http.StatusUnauthorized, model.ErrorResponse{Error: err.Error()})
 				return
 			}
 
@@ -80,7 +89,7 @@ func AuthMiddleware(
 					hf(w, r.WithContext(ctx))
 					return
 				}
-				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "invalid token"})
+				WriteJSON(w, http.StatusUnauthorized, model.ErrorResponse{Error: "invalid token"})
 				return
 			}
 
@@ -90,7 +99,11 @@ func AuthMiddleware(
 					hf(w, r.WithContext(ctx))
 					return
 				}
-				WriteJSON(w, http.StatusUnauthorized, JSON{"error": "missing userId in token"})
+				WriteJSON(
+					w,
+					http.StatusUnauthorized,
+					model.ErrorResponse{Error: "missing userId in token"},
+				)
 				return
 			}
 
@@ -102,7 +115,7 @@ func AuthMiddleware(
 					return
 				}
 				log.Printf("Error selecting user by id: %v", err)
-				WriteJSON(w, http.StatusUnauthorized, JSON{"error": err.Error()})
+				WriteJSON(w, http.StatusUnauthorized, model.ErrorResponse{Error: err.Error()})
 				return
 			}
 

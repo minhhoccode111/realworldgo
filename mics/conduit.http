@@ -2,9 +2,11 @@
 @api = {{url}}/api/v1
 @email = minhhoccode111@gmail.com
 @email0 = asd0@gmail.com
+@email1 = asd1@gmail.com
 @password = Bruh0!0!
 @username = minhhoccode111
 @username0 = asd0
+@username1 = asd1
 @bio = i like golang
 @image = https://www.w3schools.com/howto/img_avatar.png
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjAyNzEyMDgsImlhdCI6MTc1OTQwNzIwOCwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.IgV3p6itLKkUCcaJDXbTpjDtz5PY16XisJgcoAJr4gg
@@ -17,9 +19,9 @@ POST {{api}}/users
 
 {
     "user": {
-        "email": "{{email0}}",
+        "email": "{{email1}}",
         "password": "{{password}}",
-        "username": "{{username0}}"
+        "username": "{{username1}}"
     }
 }
 
