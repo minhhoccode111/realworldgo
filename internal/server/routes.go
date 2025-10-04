@@ -323,7 +323,7 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 		offset,
 	)
 	if err != nil {
-		log.Printf("Error selecting article: %v", err)
+		log.Printf("Error selecting articles: %v", err)
 		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
 		return
 	}
@@ -331,7 +331,30 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, *ar)
 }
 
-func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request)        {}
+func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := r.Context().Value(CtxUserKey).(model.User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, JSON{"error": "cannot authorize user in jwt"})
+		return
+	}
+
+	_, _, _, limit, offset := utils.SearchQueries(w, r)
+
+	ar, err := s.db.SelectArticlesFeed(
+		r.Context(),
+		currentUser.Id,
+		limit,
+		offset,
+	)
+	if err != nil {
+		log.Printf("Error selecting feeed articles: %v", err)
+		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, *ar)
+}
+
 func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request)     {}
 func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request)     {}
 func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request)  {}
