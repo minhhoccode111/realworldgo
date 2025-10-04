@@ -114,11 +114,11 @@ offset 0;
 -- NOTE: this hurt my brain bruh
 select a.slug, a.title, a.description, a.created_at, a.updated_at,
   (select exists
-    (select 1 from favorites where user_id = 'd89b1945-3193-435d-90c6-b6da95317893' and article_id = a.id)
+    (select 1 from favorites where user_id::text = 'd89b1945-3193-435d-90c6-b6da95317893' and article_id = a.id)
   ) as favorited,
   u.username, u.bio, u.image,
   (select exists
-    (select 1 from follows where follower_id = 'd89b1945-3193-435d-90c6-b6da95317893' and following_id = u.id)
+    (select 1 from follows where follower_id::text = 'd89b1945-3193-435d-90c6-b6da95317893' and following_id = u.id)
   ) as following,
   array_agg(t.name) filter (where t.name is not null) as tags,
   count(distinct f.user_id) as favorites_count,

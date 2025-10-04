@@ -247,11 +247,11 @@ func (s *service) SelectArticles(
 	query := `
 		select a.slug, a.title, a.description, a.created_at, a.updated_at,
 		  (select exists
-			(select 1 from favorites where user_id = $1 and article_id = a.id)
+			(select 1 from favorites where user_id::text = $1 and article_id = a.id)
 		  ) as favorited,
 		  u.username, u.bio, u.image,
 		  (select exists
-			(select 1 from follows where follower_id = $1 and following_id = u.id)
+			(select 1 from follows where follower_id::text = $1 and following_id = u.id)
 		  ) as following,
 		  array_agg(t.name) filter (where t.name is not null) as tags,
 		  count(distinct f.user_id) as favorites_count,
@@ -263,11 +263,11 @@ func (s *service) SelectArticles(
 		left join favorites f on f.article_id = a.id
 		left join users uf on f.user_id = uf.id
 		where a.deleted_at is null
-		  and ($2 = '' or u.username = $2) -- author
-		  and ($3 = '' or uf.username = $3) -- favorited
+		  and ($2 = '' or u.username = $2) -- author, skip if empty
+		  and ($3 = '' or uf.username = $3) -- favorited, skip if empty
 		  and ($4 = '' or exists (select 1 from article_tags at2
 			  left join tags t2 on at2.tag_id = t2.id
-			  where at2.article_id = a.id and t2.name = $4)) -- tag
+			  where at2.article_id = a.id and t2.name = $4)) -- tag, skip if empty
 		group by a.id, u.id
 		order by a.created_at desc
 		limit $5
@@ -281,8 +281,6 @@ func (s *service) SelectArticles(
 		 title-cannot-be-empty-6 | title cannot be empty | description cannot be empty | 2025-10-02 13:38:00.168028+00 | 2025-10-02 13:38:00.168028+00 | t         | asd0     |     |       | t         | {tai,vi,sao} |               1 |              1
 	*/
 
-	// TODO: handle case currentUserId is empty string
-	// "ERROR: invalid input syntax for type uuid: \"\" (SQLSTATE 22P02)"
 	rows, err := s.db.QueryContext(
 		ctx,
 		query,
