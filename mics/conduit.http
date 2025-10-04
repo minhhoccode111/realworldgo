@@ -127,7 +127,7 @@ Authorization: Token {{token}}
     }
 }
 
-### Feed
+### Get Feed Articles
 GET {{api}}/articles/feed
 Authorization: Token {{token}}
 
@@ -191,16 +191,16 @@ DELETE {{api}}/articles/{{slug}}
 Authorization: Token {{token}}
 
 ### Profile
-GET {{api}}/profiles/{{username0}}
+GET {{api}}/profiles/{{username}}
 Authorization: Token {{token}}
 
 ### Follow Profile
-POST {{api}}/profiles/{{username0}}/follow
+POST {{api}}/profiles/{{username}}/follow
 Authorization: Token {{token}}
 
 ### Unfollow Profile
-DELETE {{api}}/profiles/{{username0}}/follow
-Authorization: Token {{token}}
+DELETE {{api}}/profiles/{{username}}/follow
+Authorization: Token {{token0}}
 
 ### All Tags
 GET {{api}}/tags

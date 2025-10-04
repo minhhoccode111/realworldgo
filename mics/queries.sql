@@ -141,5 +141,31 @@ where a.deleted_at is null
   --     where at2.article_id = a.id and t2.name = 'sao')) -- filter by tag, skip if empty string
 group by a.id, u.id
 order by a.created_at desc
-limit 20
+limit 10
+offset 0;
+--------------------------------------------------------------------------------
+
+-- get /feed, recent articles from people you followed
+select a.slug, a.title, a.description, a.created_at, a.updated_at,
+  (select exists
+    (select 1 from favorites where user_id::text = 'd89b1945-3193-435d-90c6-b6da95317893' and article_id = a.id)
+  ) as favorited,
+  u.username, u.bio, u.image,
+  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
+  count(distinct f.user_id) as favorites_count,
+  count(*) over() as articles_count
+from articles a
+left join users u on a.author_id = u.id
+left join article_tags at on at.article_id = a.id
+left join tags t on t.id = at.tag_id
+left join favorites f on f.article_id = a.id
+left join users u2 on f.user_id = u2.id
+where a.deleted_at is null
+  and (select exists
+    (select 1 from follows where follower_id::text = 'd89b1945-3193-435d-90c6-b6da95317893'
+      and following_id = u.id)
+  )
+group by a.id, u.id
+order by a.created_at desc
+limit 10
 offset 0;
