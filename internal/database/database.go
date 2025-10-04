@@ -253,7 +253,7 @@ func (s *service) SelectArticles(
 		  (select exists
 			(select 1 from follows where follower_id::text = $1 and following_id = u.id)
 		  ) as following,
-		  array_agg(t.name) filter (where t.name is not null) as tags,
+		  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
 		  count(distinct f.user_id) as favorites_count,
 		  count(*) over() as articles_count -- count all articles match before applying limit
 		from articles a
@@ -263,9 +263,9 @@ func (s *service) SelectArticles(
 		left join favorites f on f.article_id = a.id
 		left join users uf on f.user_id = uf.id
 		where a.deleted_at is null
-		  and ($2 = '' or u.username = $2) -- author, skip if empty
-		  and ($3 = '' or uf.username = $3) -- favorited, skip if empty
-		  and ($4 = '' or exists (select 1 from article_tags at2
+		  and ('' = $2 or u.username = $2) -- author, skip if empty
+		  and ('' = $3 or uf.username = $3) -- favorited, skip if empty
+		  and ('' = $4 or exists (select 1 from article_tags at2
 			  left join tags t2 on at2.tag_id = t2.id
 			  where at2.article_id = a.id and t2.name = $4)) -- tag, skip if empty
 		group by a.id, u.id
@@ -328,6 +328,8 @@ func (s *service) SelectArticles(
 		return nil, err
 	}
 
+	ar.Limit = limit
+	ar.Offset = offset
 	return &ar, nil
 }
 

@@ -15,6 +15,11 @@ from users where id::text = 'd89b1945-3193-435d-90c6-b6da95317893' or email = ''
 -- check if a tag exists
 select exists (select 1 from tags where name = 'tai');
 
+-- count tags
+select t.name, at.tag_id, count(*) from article_tags at
+left join tags t on at.tag_id = t.id
+group by at.tag_id, t.name;
+
 -- query all tags of an article
 select slug, title, description, body, name from articles a
 left join article_tags at on a.id = at.article_id
@@ -27,8 +32,7 @@ select a.slug, a.title, a.description, a.body,
 from articles a
 left join article_tags at on a.id = at.article_id
 left join tags t on at.tag_id = t.id
-where a.title = 'title cannot be empty'
-group by a.id, a.slug, a.title, a.description, a.body;
+group by a.id;
 
 -- query all articles of a tag
 select t.name, a.slug, u.username from tags t
@@ -120,7 +124,7 @@ select a.slug, a.title, a.description, a.created_at, a.updated_at,
   (select exists
     (select 1 from follows where follower_id::text = 'd89b1945-3193-435d-90c6-b6da95317893' and following_id = u.id)
   ) as following,
-  array_agg(t.name) filter (where t.name is not null) as tags,
+  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
   count(distinct f.user_id) as favorites_count,
   count(*) over() as articles_count -- count all articles after filtering and before applying limit
 from articles a
@@ -128,13 +132,13 @@ left join users u on a.author_id = u.id
 left join article_tags at on at.article_id = a.id
 left join tags t on t.id = at.tag_id
 left join favorites f on f.article_id = a.id
-left join users uf on f.user_id = uf.id
+left join users u2 on f.user_id = u2.id
 where a.deleted_at is null
-  and ('asd0' = '' or u.username = 'asd0') -- filter by author username, skip if empty string
-  and ('minhhoccode111' = '' or uf.username = 'minhhoccode111') -- filter by favorited username, skip if empty string
-  and ('sao' = '' or exists (select 1 from article_tags at2
-      left join tags t2 on at2.tag_id = t2.id
-      where at2.article_id = a.id and t2.name = 'sao')) -- filter by tag, skip if empty string
+  -- and ('' = 'asd0' or u.username = 'asd0') -- filter by author username, skip if empty string
+  -- and ('' = 'minhhoccode111' or u2.username = 'minhhoccode111') -- filter by favorited username, skip if empty string
+  -- and ('' = 'sao' or exists (select 1 from article_tags at2
+  --     left join tags t2 on at2.tag_id = t2.id
+  --     where at2.article_id = a.id and t2.name = 'sao')) -- filter by tag, skip if empty string
 group by a.id, u.id
 order by a.created_at desc
 limit 20

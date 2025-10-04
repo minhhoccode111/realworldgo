@@ -48,4 +48,6 @@ type ArticleDetailResponse struct {
 type ArticlesResponse struct {
 	Articles      []ArticlePreviewResponse `json:"articles"`
 	ArticlesCount int                      `json:"articlesCount"`
+	Limit         int                      `json:"limit"`
+	Offset        int                      `json:"offset"`
 }

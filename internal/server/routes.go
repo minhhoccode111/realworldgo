@@ -323,12 +323,11 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 		offset,
 	)
 	if err != nil {
-		log.Printf("")
+		log.Printf("Error selecting article: %v", err)
 		WriteJSON(w, http.StatusUnprocessableEntity, JSON{"error": err.Error()})
 		return
 	}
 
-	// FIX: duplicate tag in tags list
 	WriteJSON(w, http.StatusOK, *ar)
 }
 

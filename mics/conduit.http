@@ -51,27 +51,68 @@ Authorization: Token {{token}}
     }
 }
 
+### All Articles without auth
+GET {{api}}/articles
+
+### All Articles without auth, with limit and offset
+GET {{api}}/articles
+    ?limit=10
+    &offset=10
+
+### All Articles without auth, with limit and offset, author
+GET {{api}}/articles
+    ?limit=10
+    &offset=0
+    &author={{username0}}
+
+### All Articles without auth, with limit and offset, author, favorited
+GET {{api}}/articles
+    ?limit=10
+    &offset=0
+    &author={{username}}
+    &favorited={{username}}
+
+### All Articles without auth, with limit and offset, author, favorited, tag
+GET {{api}}/articles
+    ?limit=10
+    &offset=0
+    &author={{username}}
+    &favorited={{username}}
+    &tag=sao
+
 ### All Articles with auth
 GET {{api}}/articles
-
-### All Articles with params
-GET {{api}}/articles
-    ?author={{username}}
 Authorization: Token {{token}}
 
-### All Articles with params
+### All Articles with auth, with limit and offset
 GET {{api}}/articles
-    ?favorited={{username}}
+    ?limit=10
+    &offset=10
 Authorization: Token {{token}}
 
-### All Articles with params
+### All Articles with auth, with limit and offset, author
 GET {{api}}/articles
-    ?author=
-    &favorited=
-    &tag=
-    &limit=10
+    ?limit=10
     &offset=0
+    &author={{username0}}
 Authorization: Token {{token}}
+
+### All Articles with auth, with limit and offset, author, favorited
+GET {{api}}/articles
+    ?limit=10
+    &offset=0
+    &author={{username}}
+    &favorited={{username}}
+Authorization: Token {{token}}
+
+### All Articles with auth, with limit and offset, author, favorited, tag
+GET {{api}}/articles
+    ?limit=10
+    &offset=0
+    &author={{username}}
+    &favorited={{username}}
+    &tag=sao
+Authorization: Token {{token0}}
 
 ### Create Article
 POST {{api}}/articles
@@ -82,7 +123,7 @@ Authorization: Token {{token}}
         "title": "title cannot be empty",
         "description": "description cannot be empty",
         "body": "body cannot be empty",
-        "tagList": []
+        "tagList": ["tai", "vi", "sao"]
     }
 }
 
