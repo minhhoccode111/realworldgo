@@ -8,6 +8,10 @@ VALUES (
   '$2a$10$I9ZdFZ1OMx.LO3dnmv65DO344FPoaUj8LXXv01jzmIgIKFAqF5uia'
 );
 
+-- 7c6ecf9d-0c0d-43f7-959f-f397706a760e
+-- d89b1945-3193-435d-90c6-b6da95317893
+-- 430e5f27-3aaf-48d5-b9ab-a4f364dd8119
+
 -- select user by either id, email, username
 select id, email, username, password, bio, image, created_at, updated_at
 from users where id::text = 'd89b1945-3193-435d-90c6-b6da95317893' or email = '' or username = '';
@@ -69,6 +73,17 @@ select u.id, a.id
 from users u
 cross join articles a
 where u.username = 'minhhoccode111';
+
+-- a user favorite an article by its slug
+insert into favorites (user_id, article_id)
+  select u.id, a.id
+from users u, articles a
+  where u.username = 'asd0' and a.slug = 'slug';
+
+-- a user unfavorite an article by its slug
+delete from favorites f
+where f.article_id = (select id from articles where slug = 'slug')
+and f.user_id = (select id from users where username = 'asd0');
 
 -- generate fake data by letting a user favorite all articles of other users except itself
 insert into favorites (user_id, article_id)
@@ -169,3 +184,22 @@ group by a.id, u.id
 order by a.created_at desc
 limit 10
 offset 0;
+
+-- select an article detail (with body) by slug, get tags, favorited, favorites_count, author profile, personalize with current user, deleted_at is null
+select a.slug, a.title, a.description, a.body, a.created_at, a.updated_at,
+  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
+  (select exists
+    (select 1 from favorites where article_id = a.id and user_id::text = '7c6ecf9d-0c0d-43f7-959f-f397706a760e')
+  ) as favorited,
+  (count(distinct f.user_id)) as favorites_count,
+  u.username, u.bio, u.image,
+  (select exists
+    (select 1 from follows where a.author_id = following_id and follower_id::text = '7c6ecf9d-0c0d-43f7-959f-f397706a760e')
+  ) as following
+from articles a
+left join users u on a.author_id = u.id
+left join article_tags at on at.article_id = a.id
+left join tags t on at.tag_id = t.id
+left join favorites f on f.article_id = a.id
+where a.deleted_at is null and slug = 'slug'
+group by a.id, u.id;
