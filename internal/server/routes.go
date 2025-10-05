@@ -383,6 +383,10 @@ func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
 		currentUserId,
 		slug,
 	)
+	if errors.Is(err, sql.ErrNoRows) {
+		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "Article not found"})
+		return
+	}
 	if err != nil {
 		log.Printf("Error selecting article: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
@@ -417,12 +421,11 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: add concurrency or use one single query instead of two
 	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
+	if errors.Is(err, sql.ErrNoRows) {
+		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+		return
+	}
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			WriteJSON(w, http.StatusNoContent, ErrorResponse{Error: "username not found"})
-			return
-		}
-
 		log.Printf("Error selecting following user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -468,12 +471,11 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
+	if errors.Is(err, sql.ErrNoRows) {
+		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+		return
+	}
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			WriteJSON(w, http.StatusNoContent, ErrorResponse{Error: "username not found"})
-			return
-		}
-
 		log.Printf("Error selecting following user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -513,12 +515,11 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
+	if errors.Is(err, sql.ErrNoRows) {
+		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+		return
+	}
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			WriteJSON(w, http.StatusNoContent, ErrorResponse{Error: "username not found"})
-			return
-		}
-
 		log.Printf("Error selecting following user: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return

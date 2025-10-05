@@ -39,6 +39,8 @@ type Service interface {
 	// IsSlugExisted checks if an article with the given slug already exists in the database
 	IsSlugExisted(ctx context.Context, slug string) (bool, error)
 
+	SelectArticle(ctx context.Context, currentUserId, slug string) (*ArticleDetail, error)
+
 	// SelectArticles returns a list of articles from the database
 	SelectArticles(
 		ctx context.Context,
@@ -244,6 +246,62 @@ func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) 
 		return false, err
 	}
 	return existed, nil
+}
+
+func (s *service) SelectArticle(
+	ctx context.Context,
+	currentUserId, slug string,
+) (*ArticleDetail, error) {
+	query := `
+		select a.slug, a.title, a.description, a.body, a.created_at, a.updated_at,
+		  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
+		  (select exists
+			(select 1 from favorites where article_id = a.id and user_id::text = $1)
+		  ) as favorited,
+		  (count(distinct f.user_id)) as favorites_count,
+		  u.username, u.bio, u.image,
+		  (select exists
+			(select 1 from follows where a.author_id = following_id and follower_id::text = $1)
+		  ) as following
+		from articles a
+		left join users u on a.author_id = u.id
+		left join article_tags at on at.article_id = a.id
+		left join tags t on at.tag_id = t.id
+		left join favorites f on f.article_id = a.id
+		where a.deleted_at is null and slug = $2
+		group by a.id, u.id;
+	`
+
+	/*
+		example output:
+		 slug | title |         description         |         body         |          created_at          |          updated_at          |     tags     | favorited | favorites_count |    username    |      bio      |                     image                      | following
+		------+-------+-----------------------------+----------------------+------------------------------+------------------------------+--------------+-----------+-----------------+----------------+---------------+------------------------------------------------+-----------
+		 slug | slug  | description cannot be empty | body cannot be empty | 2025-10-05 05:23:47.80455+00 | 2025-10-05 05:23:47.80455+00 | {sao,tai,vi} | t         |               3 | minhhoccode111 | i like golang | https://www.w3schools.com/howto/img_avatar.png | t
+	*/
+
+	a := ArticleDetail{}
+	var tags pq.StringArray
+	err := s.db.QueryRowContext(ctx, query, currentUserId, slug).Scan(
+		&a.Slug,
+		&a.Title,
+		&a.Description,
+		&a.Body,
+		&a.CreatedAt,
+		&a.UpdatedAt,
+		&tags,
+		&a.Favorited,
+		&a.FavoritesCount,
+		&a.Author.Username,
+		&a.Author.Bio,
+		&a.Author.Image,
+		&a.Author.Following,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	a.TagList = []string(tags)
+	return &a, nil
 }
 
 func (s *service) SelectArticles(
