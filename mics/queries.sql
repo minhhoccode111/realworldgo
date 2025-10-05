@@ -203,3 +203,14 @@ left join tags t on at.tag_id = t.id
 left join favorites f on f.article_id = a.id
 where a.deleted_at is null and slug = 'slug'
 group by a.id, u.id;
+
+-- select an article only
+select id, author_id, slug, title, description, body, created_at, updated_at
+from articles
+where slug = 'slug'
+and deleted_at is null;
+
+-- update an article
+update articles
+set slug = 'slug', title = 'title', description = 'description', body = 'body'
+where id::text = '';

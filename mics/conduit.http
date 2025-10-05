@@ -11,6 +11,7 @@
 @image = https://www.w3schools.com/howto/img_avatar.png
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjAyNzEyMDgsImlhdCI6MTc1OTQwNzIwOCwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.IgV3p6itLKkUCcaJDXbTpjDtz5PY16XisJgcoAJr4gg
 @token0 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjAxMDUzMTYsImlhdCI6MTc1OTI0MTMxNiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjdjNmVjZjlkLTBjMGQtNDNmNy05NTlmLWYzOTc3MDZhNzYwZSJ9.9D5b9AXg_K6_rv1bJEHxaSG7dIlzjmsmBUzdEfzIbr0
+@token1 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjA1MTI3NzIsImlhdCI6MTc1OTY0ODc3MiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjQzMGU1ZjI3LTNhYWYtNDhkNS1iOWFiLWE0ZjM2NGRkODExOSJ9.ASsV1JtaxkSrOoPlmLrErNAFo82B3Vkk3kO997drFkw
 @slug = slug
 @commentId = 123
 
@@ -30,7 +31,7 @@ POST {{api}}/users/login
 
 {
     "user": {
-        "email": "{{email0}}",
+        "email": "{{email1}}",
         "password": "{{password}}"
     }
 }
@@ -141,7 +142,10 @@ Authorization: Token {{token}}
 GET {{api}}/articles?author={{username}}
 Authorization: Token {{token}}
 
-### Single Article by slug
+### Single Article by slug, without auth
+GET {{api}}/articles/{{slug}}
+
+### Single Article by slug, with auth
 GET {{api}}/articles/{{slug}}
 Authorization: Token {{token}}
 
@@ -151,7 +155,9 @@ Authorization: Token {{token}}
 
 {
     "article": {
-        "body": "With two hands"
+        "title": "slug",
+        "body": "",
+        "description": ""
     }
 }
 

@@ -39,7 +39,14 @@ type Service interface {
 	// IsSlugExisted checks if an article with the given slug already exists in the database
 	IsSlugExisted(ctx context.Context, slug string) (bool, error)
 
-	SelectArticle(ctx context.Context, currentUserId, slug string) (*ArticleDetail, error)
+	// SelectArticle
+	SelectArticle(ctx context.Context, slug string) (*Article, error)
+
+	// SelectArticleDetails returns an article (with body), tags, favorites count, author, and relationship between current user and the article, author
+	SelectArticleDetails(ctx context.Context, currentUserId, slug string) (*ArticleDetail, error)
+
+	// UpdateUser updates the email of a user in the database.
+	UpdateArticle(ctx context.Context, newArticle *Article) (string, error)
 
 	// SelectArticles returns a list of articles from the database
 	SelectArticles(
@@ -233,6 +240,7 @@ func (s *service) UpdateUser(ctx context.Context, newUser *User) error {
 	return err
 }
 
+// TODO: change to CanSlugBeUsed that also accept old article id
 func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) {
 	var existed bool
 	err := s.db.QueryRowContext(ctx, `
@@ -248,7 +256,31 @@ func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) 
 	return existed, nil
 }
 
-func (s *service) SelectArticle(
+func (s *service) SelectArticle(ctx context.Context, slug string) (*Article, error) {
+	query := `
+	select id, author_id, slug, title, description, body, created_at, updated_at
+	from articles
+	where slug = $1
+	and deleted_at is null
+	`
+	var a Article
+	err := s.db.QueryRowContext(ctx, query, slug).Scan(
+		&a.Id,
+		&a.AuthorId,
+		&a.Slug,
+		&a.Title,
+		&a.Description,
+		&a.Body,
+		&a.CreatedAt,
+		&a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (s *service) SelectArticleDetails(
 	ctx context.Context,
 	currentUserId, slug string,
 ) (*ArticleDetail, error) {
@@ -302,6 +334,46 @@ func (s *service) SelectArticle(
 
 	a.TagList = []string(tags)
 	return &a, nil
+}
+
+func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (string, error) {
+	var err error
+	baseSlug := slug.Make(newArticle.Title)
+	newArticle.Slug = baseSlug
+	for i := 0; ; i++ {
+		var existed bool
+		// BUG: auto increment slug even when it's the same old slug
+		existed, err = s.IsSlugExisted(ctx, newArticle.Slug)
+		if err != nil {
+			return "", err
+		}
+
+		if !existed {
+			break
+		}
+
+		newArticle.Slug = baseSlug + "-" + strconv.Itoa(i)
+	}
+
+	// TODO: on conflict ignore because it's the same old slug?
+	query := `
+		update articles
+		set slug = $1, title = $2, description = $3, body = $4
+		where id = $5;
+	`
+
+	_, err = s.db.ExecContext(ctx, query,
+		newArticle.Slug,
+		newArticle.Title,
+		newArticle.Description,
+		newArticle.Body,
+		newArticle.Id,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return newArticle.Slug, nil
 }
 
 func (s *service) SelectArticles(

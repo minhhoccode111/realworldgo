@@ -28,6 +28,42 @@ type ArticleCreate struct {
 	TagList     []string `json:"tagList"`
 }
 
+type ArticleUpdate struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Body        string `json:"body"`
+}
+
+// ValidateArticleUpdate validate and assign new values to article
+func (a *Article) ValidateArticleUpdate(au *ArticleUpdate) (err error) {
+	// ignore empty fields, if field is not empty, it must pass input validations
+	// otherwise, reject whole process
+
+	if au.Title != "" {
+		a.Title, err = utils.IsValidTitle(au.Title)
+		if err != nil {
+			return err
+		}
+	}
+
+	if au.Description != "" {
+		a.Description, err = utils.IsValidDescription(au.Description)
+		if err != nil {
+			return err
+		}
+	}
+
+	if au.Body != "" {
+		body := strings.TrimSpace(au.Body)
+		if body == "" {
+			return fmt.Errorf("body cannot be empty")
+		}
+		a.Body = body
+	}
+
+	return nil
+}
+
 func (ac *ArticleCreate) Validate() (err error) {
 	ac.Title, err = utils.IsValidTitle(ac.Title)
 	if err != nil {

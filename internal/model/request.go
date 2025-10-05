@@ -15,3 +15,7 @@ type UserUpdateRequest struct {
 type ArticleCreateRequest struct {
 	Article ArticleCreate `json:"article"`
 }
+
+type ArticleUpdateRequest struct {
+	Article ArticleUpdate `json:"article"`
+}
