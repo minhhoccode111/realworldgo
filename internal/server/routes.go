@@ -378,7 +378,7 @@ func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
 		currentUserId = currentUser.Id
 	}
 
-	articleDetail, err := s.db.SelectArticle(
+	articleDetail, err := s.db.SelectArticleDetails(
 		r.Context(),
 		currentUserId,
 		slug,
@@ -392,12 +392,80 @@ func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
+
 	WriteJSON(w, http.StatusOK, ArticleDetailResponse{
 		Article: *articleDetail,
 	})
 }
 
-func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request)     {}
+func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var body ArticleUpdateRequest
+
+	err = json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+
+	article, err := s.db.SelectArticle(
+		r.Context(),
+		slug,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "Article not found"})
+		return
+	}
+	if err != nil {
+		log.Printf("Error selecting article: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	// authz
+	if article.AuthorId != currentUser.Id {
+		WriteJSON(w, http.StatusForbidden,
+			ErrorResponse{Error: "Only article author can update it"},
+		)
+		return
+	}
+
+	// input validation and sanitization
+	err = article.ValidateArticleUpdate(&body.Article)
+	if err != nil {
+		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	newSlug, err := s.db.UpdateArticle(r.Context(), article)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	articleDetail, err := s.db.SelectArticleDetails(r.Context(), currentUser.Id, newSlug)
+	if err != nil {
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, ArticleDetailResponse{Article: *articleDetail})
+}
+
 func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request)  {}
 func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {}
