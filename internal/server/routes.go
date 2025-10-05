@@ -272,6 +272,7 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		Description: body.Article.Description,
 	}
 
+	// TODO: return slug to retrieve newly inserted article?
 	err = s.db.CreateArticle(r.Context(), &newArticle, body.Article.TagList)
 	if err != nil {
 		log.Printf("Error creating article: %v", err)
@@ -358,30 +359,38 @@ func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
-	// isAuth := r.Context().Value(CtxIsAuthKey).(bool)
-	// currentUser, ok := r.Context().Value(CtxUserKey).(User)
-	// if !ok && isAuth {
-	// 	WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
-	// 	return
-	// }
-	//
-	// vars := mux.Vars(r)
-	// slug, ok := vars["slug"]
-	// if !ok {
-	// 	WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
-	// 	return
-	// }
-	//
-	// var currentUserId string
-	// if isAuth {
-	// 	currentUserId = currentUser.Id
-	// }
-	//
-	// article, author, err := s.db.SelectArticle(
-	// 	r.Context(),
-	// 	slug,
-	// 	currentUserId,
-	// )
+	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok && isAuth {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+
+	var currentUserId string
+	if isAuth {
+		currentUserId = currentUser.Id
+	}
+
+	articleDetail, err := s.db.SelectArticle(
+		r.Context(),
+		currentUserId,
+		slug,
+	)
+	if err != nil {
+		log.Printf("Error selecting article: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+	WriteJSON(w, http.StatusOK, ArticleDetailResponse{
+		Article: *articleDetail,
+	})
 }
 
 func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request)     {}
@@ -406,6 +415,7 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: add concurrency or use one single query instead of two
 	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -449,6 +459,7 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: add concurrency or use one single query instead of three
 	err := s.db.CreateFollow(r.Context(), currentUser.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error creating follow: %v", err)
@@ -493,6 +504,7 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: add concurrency or use one single query instead of three
 	err := s.db.DeleteFollow(r.Context(), currentUser.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error deleting follow: %v", err)
