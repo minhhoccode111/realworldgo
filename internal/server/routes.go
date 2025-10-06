@@ -279,7 +279,7 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articleDetail, err := s.db.SelectArticleDetails(r.Context(), currentUser.Id, newSlug)
+	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, newSlug)
 	if err != nil {
 		log.Printf("Error selecting new article details: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
@@ -377,7 +377,7 @@ func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
 		currentUserId = currentUser.Id
 	}
 
-	articleDetail, err := s.db.SelectArticleDetails(
+	articleDetail, err := s.db.SelectArticleDetail(
 		r.Context(),
 		currentUserId,
 		slug,
@@ -456,7 +456,7 @@ func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articleDetail, err := s.db.SelectArticleDetails(r.Context(), currentUser.Id, newSlug)
+	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, newSlug)
 	if err != nil {
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -492,7 +492,52 @@ func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request)    {}
-func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request)   {}
+
+func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+
+	var body CommentCreateRequest
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		log.Printf("Error decode request body: %v", err)
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	err = body.Comment.Validate()
+	if err != nil {
+		WriteJSON(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	commentId, err := s.db.CreateComment(r.Context(), currentUser.Id, slug, body.Comment.Body)
+	if err != nil {
+		log.Printf("Error inserting comment: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	commentDetail, err := s.db.SelectCommentDetail(r.Context(), currentUser.Id, commentId)
+	if err != nil {
+		log.Printf("Error selecting comment detail: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, CommentDetailResponse{Comment: *commentDetail})
+}
+
 func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)

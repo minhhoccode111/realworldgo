@@ -29,11 +29,11 @@ type Service interface {
 	// It returns an error if the connection cannot be closed.
 	Close(dbName string) error
 
-	// SelectUserById returns a user from the database by its ID.
-	SelectUser(ctx context.Context, id, email, username string) (*User, error)
-
 	// CreateUser inserts a new user into the database.
 	CreateUser(ctx context.Context, newUser *User) error
+
+	// SelectUserById returns a user from the database by its ID.
+	SelectUser(ctx context.Context, id, email, username string) (*User, error)
 
 	// UpdateUser updates the email of a user in the database.
 	UpdateUser(ctx context.Context, newUser *User) error
@@ -41,17 +41,8 @@ type Service interface {
 	// CanSlugBeUSed checks if an article with the given slug already exists in the database
 	CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error)
 
-	// SelectArticle
-	SelectArticle(ctx context.Context, slug string) (*Article, error)
-
-	// SelectArticleDetails returns an article (with body), tags, favorites count, author, and relationship between current user and the article, author
-	SelectArticleDetails(ctx context.Context, currentUserId, slug string) (*ArticleDetail, error)
-
-	// UpdateUser updates the email of a user in the database.
-	UpdateArticle(ctx context.Context, newArticle *Article) (string, error)
-
-	// DeleteArticle soft deletes the article
-	DeleteArticle(ctx context.Context, authorId, slug string) error
+	// CreateArticle inserts a new user into the database.
+	CreateArticle(ctx context.Context, newArticle *Article, tags []string) (string, error)
 
 	// SelectArticles returns a list of articles from the database
 	SelectArticles(
@@ -67,8 +58,26 @@ type Service interface {
 		limit, offset int,
 	) (articles []ArticlePreview, articlesCount int, err error)
 
-	// CreateArticle inserts a new user into the database.
-	CreateArticle(ctx context.Context, newArticle *Article, tags []string) (string, error)
+	// SelectArticle
+	SelectArticle(ctx context.Context, slug string) (*Article, error)
+
+	// SelectArticleDetail returns an article (with body), tags, favorites count, author, and relationship between current user and the article, author
+	SelectArticleDetail(ctx context.Context, currentUserId, slug string) (*ArticleDetail, error)
+
+	// UpdateUser updates the email of a user in the database.
+	UpdateArticle(ctx context.Context, newArticle *Article) (string, error)
+
+	// DeleteArticle soft deletes the article
+	DeleteArticle(ctx context.Context, currentUserId, slug string) error
+
+	// CreateComment creates a new comment on an article
+	CreateComment(ctx context.Context, slug, currentUserId, body string) (string, error)
+
+	// SelectCommentDetail returns a comment (with body), author, and relationship between current user and the author
+	SelectCommentDetail(
+		ctx context.Context,
+		currentUserId, commentId string,
+	) (*CommentDetail, error)
 
 	// IsFollowing checks if the follower is following the followingName
 	IsFollowing(ctx context.Context, followerId, followingName string) (bool, error)
@@ -159,6 +168,27 @@ func (s *service) Close(dbName string) error {
 	return s.db.Close()
 }
 
+func (s *service) CreateUser(ctx context.Context, newUser *User) error {
+	hashedPassword, err := HashedPassword(newUser.Password)
+	if err != nil {
+		log.Printf("Error hashing %v: %v", newUser.Password, err)
+		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
+	}
+	row := s.db.QueryRowContext(ctx, `
+		INSERT INTO users(email, username, password, bio, image)
+		VALUES($1, $2, $3, $4, $5)
+		RETURNING id
+		`,
+		newUser.Email,
+		newUser.Username,
+		hashedPassword,
+		newUser.Bio,
+		newUser.Image,
+	)
+	err = row.Scan(&newUser.Id)
+	return err
+}
+
 func (s *service) SelectUser(ctx context.Context, id, email, username string) (*User, error) {
 	var user User
 	var row *sql.Row
@@ -197,27 +227,6 @@ func (s *service) SelectUser(ctx context.Context, id, email, username string) (*
 	}
 
 	return &user, nil
-}
-
-func (s *service) CreateUser(ctx context.Context, newUser *User) error {
-	hashedPassword, err := HashedPassword(newUser.Password)
-	if err != nil {
-		log.Printf("Error hashing %v: %v", newUser.Password, err)
-		return fmt.Errorf("Error hashing %v: %v", newUser.Password, err)
-	}
-	row := s.db.QueryRowContext(ctx, `
-		INSERT INTO users(email, username, password, bio, image)
-		VALUES($1, $2, $3, $4, $5)
-		RETURNING id
-		`,
-		newUser.Email,
-		newUser.Username,
-		hashedPassword,
-		newUser.Bio,
-		newUser.Image,
-	)
-	err = row.Scan(&newUser.Id)
-	return err
 }
 
 func (s *service) UpdateUser(ctx context.Context, newUser *User) error {
@@ -262,93 +271,41 @@ func (s *service) CanSlugBeUSed(ctx context.Context, articleId, slug string) (bo
 	return existed, nil
 }
 
-func (s *service) SelectArticle(ctx context.Context, slug string) (*Article, error) {
-	query := `
-	select id, author_id, slug, title, description, body, created_at, updated_at
-	from articles
-	where slug = $1
-	and deleted_at is null
-	`
-	var a Article
-	err := s.db.QueryRowContext(ctx, query, slug).Scan(
-		&a.Id,
-		&a.AuthorId,
-		&a.Slug,
-		&a.Title,
-		&a.Description,
-		&a.Body,
-		&a.CreatedAt,
-		&a.UpdatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &a, nil
-}
-
-func (s *service) SelectArticleDetails(
+func (s *service) CreateArticle(
 	ctx context.Context,
-	currentUserId, slug string,
-) (*ArticleDetail, error) {
-	query := `
-		select a.slug, a.title, a.description, a.body, a.created_at, a.updated_at,
-		  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
-		  (select exists
-			(select 1 from favorites where article_id = a.id and user_id::text = $1)
-		  ) as favorited,
-		  (count(distinct f.user_id)) as favorites_count,
-		  u.username, u.bio, u.image,
-		  (select exists
-			(select 1 from follows where a.author_id = following_id and follower_id::text = $1)
-		  ) as following
-		from articles a
-		left join users u on a.author_id = u.id
-		left join article_tags at on at.article_id = a.id
-		left join tags t on at.tag_id = t.id
-		left join favorites f on f.article_id = a.id
-		where a.deleted_at is null and slug = $2
-		group by a.id, u.id;
-	`
+	newArticle *Article,
+	tags []string,
+) (newSlug string, err error) {
+	// 1. insert new article to db to generate id
+	// 2. create a list of tags, will return error if unique constraint fail
+	// 3. create rows in junction table between article and tags
+	// we can apply concurrency for 1. and 2.
+	// and we also need ACID transaction to make sure every query succeed
 
-	/*
-		example output:
-		 slug | title |         description         |         body         |          created_at          |          updated_at          |     tags     | favorited | favorites_count |    username    |      bio      |                     image                      | following
-		------+-------+-----------------------------+----------------------+------------------------------+------------------------------+--------------+-----------+-----------------+----------------+---------------+------------------------------------------------+-----------
-		 slug | slug  | description cannot be empty | body cannot be empty | 2025-10-05 05:23:47.80455+00 | 2025-10-05 05:23:47.80455+00 | {sao,tai,vi} | t         |               3 | minhhoccode111 | i like golang | https://www.w3schools.com/howto/img_avatar.png | t
-	*/
-
-	a := ArticleDetail{}
-	var tags pq.StringArray
-	err := s.db.QueryRowContext(ctx, query, currentUserId, slug).Scan(
-		&a.Slug,
-		&a.Title,
-		&a.Description,
-		&a.Body,
-		&a.CreatedAt,
-		&a.UpdatedAt,
-		&tags,
-		&a.Favorited,
-		&a.FavoritesCount,
-		&a.Author.Username,
-		&a.Author.Bio,
-		&a.Author.Image,
-		&a.Author.Following,
-	)
+	var tx *sql.Tx
+	tx, err = s.db.Begin()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	a.TagList = []string(tags)
-	return &a, nil
-}
+	// defer a rollback in case of an error or panic
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r) // re-throw panic after Rollback
+		} else if err != nil {
+			tx.Rollback() // rollback transaction if error occurs
+		}
+	}()
 
-func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (string, error) {
-	var err error
+	// TODO: add concurrency with goroutines and channels to improve performance
+
+	// insert an article, return its id
 	baseSlug := slug.Make(newArticle.Title)
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
 		var existed bool
-		existed, err = s.CanSlugBeUSed(ctx, newArticle.Id, newArticle.Slug)
+		existed, err = s.CanSlugBeUSed(ctx, "", newArticle.Slug)
 		if err != nil {
 			return "", err
 		}
@@ -360,39 +317,59 @@ func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (strin
 		newArticle.Slug = baseSlug + "-" + strconv.Itoa(i)
 	}
 
-	query := `
-		update articles
-		set slug = $1, title = $2, description = $3, body = $4
-		where id = $5 and deleted_at is null;
-	`
-
-	_, err = s.db.ExecContext(ctx, query,
+	err = s.db.QueryRowContext(ctx, `
+		INSERT INTO articles (author_id, slug, title, description, body)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at, updated_at
+		`,
+		newArticle.AuthorId,
 		newArticle.Slug,
 		newArticle.Title,
 		newArticle.Description,
 		newArticle.Body,
-		newArticle.Id,
-	)
+	).Scan(&newArticle.Id, &newArticle.CreatedAt, &newArticle.UpdatedAt)
+	if err != nil {
+		return "", err
+	}
+
+	// TODO: if we have large number of tags, we need to use batch insert to improve performance
+	for _, tagName := range tags {
+		// insert or get existing tag
+		var tagId string
+		// `ON CONFLICT (name)`: if insert conflict on `name` col (unique constraint)
+		// `DO UPDATE SET name=EXCLUDED.name`: update the name to the new name (same)
+		// `EXCLUDED`: represent our newly inserted row
+		err := s.db.QueryRowContext(ctx, `
+				INSERT INTO tags (name)
+				VALUES ($1)
+				ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name
+				RETURNING id
+				`, tagName,
+		).Scan(&tagId)
+		if err != nil {
+			return "", err
+		}
+
+		// insert junction
+		_, err = s.db.ExecContext(ctx, `
+			insert into article_tags (article_id, tag_id)
+			values ($1, $2)
+			on conflict do nothing
+			`,
+			newArticle.Id,
+			tagId,
+		)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	err = tx.Commit()
 	if err != nil {
 		return "", err
 	}
 
 	return newArticle.Slug, nil
-}
-
-func (s *service) DeleteArticle(ctx context.Context, authorId, slug string) error {
-	query := `
-	update articles
-	set deleted_at = now()
-	where author_id = $1 and slug = $2
-	`
-
-	_, err := s.db.ExecContext(ctx, query, authorId, slug)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *service) SelectArticles(
@@ -569,41 +546,93 @@ func (s *service) SelectArticlesFeed(
 	return nil, 0, err
 }
 
-func (s *service) CreateArticle(
-	ctx context.Context,
-	newArticle *Article,
-	tags []string,
-) (newSlug string, err error) {
-	// 1. insert new article to db to generate id
-	// 2. create a list of tags, will return error if unique constraint fail
-	// 3. create rows in junction table between article and tags
-	// we can apply concurrency for 1. and 2.
-	// and we also need ACID transaction to make sure every query succeed
-
-	var tx *sql.Tx
-	tx, err = s.db.Begin()
+func (s *service) SelectArticle(ctx context.Context, slug string) (*Article, error) {
+	query := `
+	select id, author_id, slug, title, description, body, created_at, updated_at
+	from articles
+	where slug = $1
+	and deleted_at is null
+	`
+	var a Article
+	err := s.db.QueryRowContext(ctx, query, slug).Scan(
+		&a.Id,
+		&a.AuthorId,
+		&a.Slug,
+		&a.Title,
+		&a.Description,
+		&a.Body,
+		&a.CreatedAt,
+		&a.UpdatedAt,
+	)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (s *service) SelectArticleDetail(
+	ctx context.Context,
+	currentUserId, slug string,
+) (*ArticleDetail, error) {
+	query := `
+		select a.slug, a.title, a.description, a.body, a.created_at, a.updated_at,
+		  coalesce(array_agg(distinct t.name) filter (where t.name is not null), '{}') as tags,
+		  (select exists
+			(select 1 from favorites where article_id = a.id and user_id::text = $1)
+		  ) as favorited,
+		  (count(distinct f.user_id)) as favorites_count,
+		  u.username, u.bio, u.image,
+		  (select exists
+			(select 1 from follows where a.author_id = following_id and follower_id::text = $1)
+		  ) as following
+		from articles a
+		left join users u on a.author_id = u.id
+		left join article_tags at on at.article_id = a.id
+		left join tags t on at.tag_id = t.id
+		left join favorites f on f.article_id = a.id
+		where a.deleted_at is null and slug = $2
+		group by a.id, u.id;
+	`
+
+	/*
+		example output:
+		 slug | title |         description         |         body         |          created_at          |          updated_at          |     tags     | favorited | favorites_count |    username    |      bio      |                     image                      | following
+		------+-------+-----------------------------+----------------------+------------------------------+------------------------------+--------------+-----------+-----------------+----------------+---------------+------------------------------------------------+-----------
+		 slug | slug  | description cannot be empty | body cannot be empty | 2025-10-05 05:23:47.80455+00 | 2025-10-05 05:23:47.80455+00 | {sao,tai,vi} | t         |               3 | minhhoccode111 | i like golang | https://www.w3schools.com/howto/img_avatar.png | t
+	*/
+
+	a := ArticleDetail{}
+	var tags pq.StringArray
+	err := s.db.QueryRowContext(ctx, query, currentUserId, slug).Scan(
+		&a.Slug,
+		&a.Title,
+		&a.Description,
+		&a.Body,
+		&a.CreatedAt,
+		&a.UpdatedAt,
+		&tags,
+		&a.Favorited,
+		&a.FavoritesCount,
+		&a.Author.Username,
+		&a.Author.Bio,
+		&a.Author.Image,
+		&a.Author.Following,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	// defer a rollback in case of an error or panic
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r) // re-throw panic after Rollback
-		} else if err != nil {
-			tx.Rollback() // rollback transaction if error occurs
-		}
-	}()
+	a.TagList = []string(tags)
+	return &a, nil
+}
 
-	// TODO: add concurrency with goroutines and channels to improve performance
-
-	// insert an article, return its id
+func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (string, error) {
+	var err error
 	baseSlug := slug.Make(newArticle.Title)
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
 		var existed bool
-		existed, err = s.CanSlugBeUSed(ctx, "", newArticle.Slug)
+		existed, err = s.CanSlugBeUSed(ctx, newArticle.Id, newArticle.Slug)
 		if err != nil {
 			return "", err
 		}
@@ -615,59 +644,53 @@ func (s *service) CreateArticle(
 		newArticle.Slug = baseSlug + "-" + strconv.Itoa(i)
 	}
 
-	err = s.db.QueryRowContext(ctx, `
-		INSERT INTO articles (author_id, slug, title, description, body)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, created_at, updated_at
-		`,
-		newArticle.AuthorId,
+	query := `
+		update articles
+		set slug = $1, title = $2, description = $3, body = $4
+		where id = $5 and deleted_at is null;
+	`
+
+	_, err = s.db.ExecContext(ctx, query,
 		newArticle.Slug,
 		newArticle.Title,
 		newArticle.Description,
 		newArticle.Body,
-	).Scan(&newArticle.Id, &newArticle.CreatedAt, &newArticle.UpdatedAt)
-	if err != nil {
-		return "", err
-	}
-
-	// TODO: if we have large number of tags, we need to use batch insert to improve performance
-	for _, tagName := range tags {
-		// insert or get existing tag
-		var tagId string
-		// `ON CONFLICT (name)`: if insert conflict on `name` col (unique constraint)
-		// `DO UPDATE SET name=EXCLUDED.name`: update the name to the new name (same)
-		// `EXCLUDED`: represent our newly inserted row
-		err := s.db.QueryRowContext(ctx, `
-				INSERT INTO tags (name)
-				VALUES ($1)
-				ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name
-				RETURNING id
-				`, tagName,
-		).Scan(&tagId)
-		if err != nil {
-			return "", err
-		}
-
-		// insert junction
-		_, err = s.db.ExecContext(ctx, `
-			insert into article_tags (article_id, tag_id)
-			values ($1, $2)
-			on conflict do nothing
-			`,
-			newArticle.Id,
-			tagId,
-		)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	err = tx.Commit()
+		newArticle.Id,
+	)
 	if err != nil {
 		return "", err
 	}
 
 	return newArticle.Slug, nil
+}
+
+func (s *service) DeleteArticle(ctx context.Context, currentUserId, slug string) error {
+	query := `
+	update articles
+	set deleted_at = now()
+	where author_id = $1 and slug = $2
+	`
+
+	_, err := s.db.ExecContext(ctx, query, currentUserId, slug)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) CreateComment(
+	ctx context.Context,
+	currentUserId, slug, body string,
+) (string, error) {
+	return "", nil
+}
+
+func (s *service) SelectCommentDetail(
+	ctx context.Context,
+	currentUserid, slug string,
+) (*CommentDetail, error) {
+	return nil, nil
 }
 
 func (s *service) IsFollowing(ctx context.Context, followerId, followingName string) (bool, error) {

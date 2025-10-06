@@ -19,3 +19,7 @@ type ArticleCreateRequest struct {
 type ArticleUpdateRequest struct {
 	Article ArticleUpdate `json:"article"`
 }
+
+type CommentCreateRequest struct {
+	Comment CommentCreate `json:"comment"`
+}

@@ -26,3 +26,7 @@ type ArticlesResponse struct {
 type ProfilePreviewResponse struct {
 	Profile ProfilePreview `json:"profile"`
 }
+
+type CommentDetailResponse struct {
+	Comment CommentDetail `json:"comment"`
+}
