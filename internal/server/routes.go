@@ -65,7 +65,7 @@ func (s *Server) registerV1Routes(r *mux.Router) {
 	r.HandleFunc("/articles/{slug}/favorite", auth(s.PostFavoriteHandler)).Methods("POST")
 	r.HandleFunc("/articles/{slug}/favorite", auth(s.DeleteFavoriteHandler)).Methods("DELETE")
 
-	r.HandleFunc("/articles/{slug}/comments", s.GetCommentsHandler).Methods("GET")
+	r.HandleFunc("/articles/{slug}/comments", optionalAuth(s.GetCommentsHandler)).Methods("GET")
 	r.HandleFunc("/articles/{slug}/comments", auth(s.PostCommentsHandler)).Methods("POST")
 	r.HandleFunc("/articles/{slug}/comments/{id}", auth(s.DeleteCommentsHandler)).Methods("DELETE")
 
@@ -491,7 +491,50 @@ func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {}
-func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request)    {}
+
+func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
+	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok && isAuth {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	var currentUserId string
+	if isAuth {
+		currentUserId = currentUser.Id
+	}
+
+	_, _, _, limit, offset := SearchQueries(w, r)
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+
+	comments, commentsCount, err := s.db.SelectComments(
+		r.Context(),
+		currentUserId,
+		slug,
+		limit,
+		offset,
+	)
+	if err != nil {
+		log.Printf("Error selecting comments: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, CommentsResponse{
+		Comments:      comments,
+		CommentsCount: commentsCount,
+		Limit:         limit,
+		Offset:        offset,
+	})
+
+}
 
 func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)

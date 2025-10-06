@@ -29,29 +29,29 @@ type Service interface {
 	// It returns an error if the connection cannot be closed.
 	Close(dbName string) error
 
-	// CreateUser inserts a new user into the database.
+	// CreateUser inserts a new user
 	CreateUser(ctx context.Context, newUser *User) error
 
-	// SelectUserById returns a user from the database by its ID.
+	// SelectUserById returns a user by id
 	SelectUser(ctx context.Context, id, email, username string) (*User, error)
 
-	// UpdateUser updates the email of a user in the database.
+	// UpdateUser updates a user
 	UpdateUser(ctx context.Context, newUser *User) error
 
-	// CanSlugBeUSed checks if an article with the given slug already exists in the database
+	// CanSlugBeUSed checks if an article with the given slug already exists
 	CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error)
 
-	// CreateArticle inserts a new user into the database.
+	// CreateArticle inserts a new user
 	CreateArticle(ctx context.Context, newArticle *Article, tags []string) (string, error)
 
-	// SelectArticles returns a list of articles from the database
+	// SelectArticles returns a list of articles
 	SelectArticles(
 		ctx context.Context,
 		currentUserId, tag, author, favorited string,
 		limit, offset int,
 	) (articles []ArticlePreview, articlesCount int, err error)
 
-	// SelectArticlesFeed returns a list of articles from the database
+	// SelectArticlesFeed returns a list of articles
 	SelectArticlesFeed(
 		ctx context.Context,
 		currentUserId string,
@@ -72,6 +72,13 @@ type Service interface {
 
 	// CreateComment creates a new comment on an article
 	CreateComment(ctx context.Context, slug, currentUserId, body string) (string, error)
+
+	// TODO: SelectComments returns a list of comments
+	SelectComments(
+		ctx context.Context,
+		currentUserId, tag, author, favorited string,
+		limit, offset int,
+	) (articles []ArticlePreview, articlesCount int, err error)
 
 	// SelectCommentDetail returns a comment (with body), author, and relationship between current user and the author
 	SelectCommentDetail(

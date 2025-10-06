@@ -30,3 +30,10 @@ type ProfilePreviewResponse struct {
 type CommentDetailResponse struct {
 	Comment CommentDetail `json:"comment"`
 }
+
+type CommentsResponse struct {
+	Comments      []CommentDetail `json:"comments"`
+	CommentsCount int             `json:"comments_count"`
+	Limit         int             `json:"limit"`
+	Offset        int             `json:"offset"`
+}

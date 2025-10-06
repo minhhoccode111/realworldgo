@@ -24,7 +24,7 @@ func SearchQueries(
 
 	limitStr := strings.TrimSpace(r.URL.Query().Get("limit"))
 	limit, err = strconv.Atoi(limitStr)
-	if err != nil {
+	if err != nil || limit < 0 || limit > 200 {
 		limit = 20
 	}
 
