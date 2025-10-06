@@ -36,8 +36,8 @@ type Service interface {
 	// UpdateUser updates the email of a user in the database.
 	UpdateUser(ctx context.Context, newUser *User) error
 
-	// IsSlugExisted checks if an article with the given slug already exists in the database
-	IsSlugExisted(ctx context.Context, slug string) (bool, error)
+	// CanSlugBeUSed checks if an article with the given slug already exists in the database
+	CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error)
 
 	// SelectArticle
 	SelectArticle(ctx context.Context, slug string) (*Article, error)
@@ -240,16 +240,16 @@ func (s *service) UpdateUser(ctx context.Context, newUser *User) error {
 	return err
 }
 
-// TODO: change to CanSlugBeUsed that also accept old article id
-func (s *service) IsSlugExisted(ctx context.Context, slug string) (bool, error) {
+func (s *service) CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error) {
+	// if an article try to update with its same old slug, we can skip
+	query := `
+	select exists (
+		select 1 from articles
+		where id::text <> $1 and slug = $2
+	)
+	`
 	var existed bool
-	err := s.db.QueryRowContext(ctx, `
-		select exists (
-			select 1 from articles
-			where slug = $1
-		)
-		`, slug,
-	).Scan(&existed)
+	err := s.db.QueryRowContext(ctx, query, articleId, slug).Scan(&existed)
 	if err != nil {
 		return false, err
 	}
@@ -342,8 +342,7 @@ func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (strin
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
 		var existed bool
-		// BUG: auto increment slug even when it's the same old slug
-		existed, err = s.IsSlugExisted(ctx, newArticle.Slug)
+		existed, err = s.CanSlugBeUSed(ctx, newArticle.Id, newArticle.Slug)
 		if err != nil {
 			return "", err
 		}
@@ -355,7 +354,6 @@ func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (strin
 		newArticle.Slug = baseSlug + "-" + strconv.Itoa(i)
 	}
 
-	// TODO: on conflict ignore because it's the same old slug?
 	query := `
 		update articles
 		set slug = $1, title = $2, description = $3, body = $4
@@ -584,7 +582,7 @@ func (s *service) CreateArticle(
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
 		var existed bool
-		existed, err = s.IsSlugExisted(ctx, newArticle.Slug)
+		existed, err = s.CanSlugBeUSed(ctx, "", newArticle.Slug)
 		if err != nil {
 			return err
 		}

@@ -155,7 +155,7 @@ Authorization: Token {{token}}
 
 {
     "article": {
-        "title": "slug",
+        "title": "Slug",
         "body": "",
         "description": ""
     }
