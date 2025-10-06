@@ -119,14 +119,14 @@ Authorization: Token {{token0}}
 
 ### Create Article
 POST {{api}}/articles
-Authorization: Token {{token}}
+Authorization: Token {{token0}}
 
 {
     "article": {
-        "title": "slug",
-        "description": "description cannot be empty",
-        "body": "body cannot be empty",
-        "tagList": ["tai", "vi", "sao"]
+        "title": "title",
+        "description": "description",
+        "body": "body",
+        "tagList": ["tag"]
     }
 }
 
@@ -203,8 +203,8 @@ GET {{api}}/profiles/{{username}}
 Authorization: Token {{token}}
 
 ### Follow Profile
-POST {{api}}/profiles/{{username}}/follow
-Authorization: Token {{token}}
+POST {{api}}/profiles/{{username0}}/follow
+Authorization: Token {{token0}}
 
 ### Unfollow Profile
 DELETE {{api}}/profiles/{{username}}/follow

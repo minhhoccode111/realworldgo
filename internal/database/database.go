@@ -63,7 +63,7 @@ type Service interface {
 	) (articles []ArticlePreview, articlesCount int, err error)
 
 	// CreateArticle inserts a new user into the database.
-	CreateArticle(ctx context.Context, newArticle *Article, tags []string) error
+	CreateArticle(ctx context.Context, newArticle *Article, tags []string) (string, error)
 
 	// IsFollowing checks if the follower is following the followingName
 	IsFollowing(ctx context.Context, followerId, followingName string) (bool, error)
@@ -552,7 +552,7 @@ func (s *service) CreateArticle(
 	ctx context.Context,
 	newArticle *Article,
 	tags []string,
-) (err error) {
+) (newSlug string, err error) {
 	// 1. insert new article to db to generate id
 	// 2. create a list of tags, will return error if unique constraint fail
 	// 3. create rows in junction table between article and tags
@@ -562,7 +562,7 @@ func (s *service) CreateArticle(
 	var tx *sql.Tx
 	tx, err = s.db.Begin()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// defer a rollback in case of an error or panic
@@ -584,7 +584,7 @@ func (s *service) CreateArticle(
 		var existed bool
 		existed, err = s.CanSlugBeUSed(ctx, "", newArticle.Slug)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		if !existed {
@@ -606,7 +606,7 @@ func (s *service) CreateArticle(
 		newArticle.Body,
 	).Scan(&newArticle.Id, &newArticle.CreatedAt, &newArticle.UpdatedAt)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// TODO: if we have large number of tags, we need to use batch insert to improve performance
@@ -624,7 +624,7 @@ func (s *service) CreateArticle(
 				`, tagName,
 		).Scan(&tagId)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		// insert junction
@@ -637,16 +637,16 @@ func (s *service) CreateArticle(
 			tagId,
 		)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return newArticle.Slug, nil
 }
 
 func (s *service) IsFollowing(ctx context.Context, followerId, followingName string) (bool, error) {

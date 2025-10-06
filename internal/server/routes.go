@@ -272,21 +272,20 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		Description: body.Article.Description,
 	}
 
-	// TODO: return slug to retrieve newly inserted article?
-	err = s.db.CreateArticle(r.Context(), &newArticle, body.Article.TagList)
+	newSlug, err := s.db.CreateArticle(r.Context(), &newArticle, body.Article.TagList)
 	if err != nil {
 		log.Printf("Error creating article: %v", err)
 		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	var following bool
-	following, err = s.db.IsFollowing(r.Context(), currentUser.Id, currentUser.Username)
+	articleDetail, err := s.db.SelectArticleDetails(r.Context(), currentUser.Id, newSlug)
+	if err != nil {
+		log.Printf("Error selecting new article details: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-	articleDetail := newArticle.ToArticleDetail(
-		*currentUser.ToProfilePreview(following),
-		body.Article.TagList,
-	)
 	WriteJSON(w, http.StatusOK, ArticleDetailResponse{Article: *articleDetail})
 }
 
