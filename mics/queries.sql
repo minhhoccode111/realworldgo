@@ -219,3 +219,27 @@ where id::text = '';
 update articles
 set deleted_at = now()
 where id::text = '' and author_id::text = '';
+
+-- create comment on an article with slug, authorId, body and article deleted_at is null
+insert into comments (article_id, author_id, body)
+values (
+  (select id from users where username = 'asd0'),
+  (select id from articles where slug = 'title-cannot-be-empty-9' and deleted_at is null),
+  'body 0'
+)
+returning id;
+
+-- select a comment, author profile and personalize with current user
+select c.id, c.body, c.created_at,
+  u.username, u.bio, u.image,
+  (select exists (
+    select 1 from follows
+    where follower_id::text = ''
+    and following_id = c.author_id
+  )) as following
+from comments c
+left join users u on u.id = c.author_id
+left join articles a on a.id = c.article_id
+where c.deleted_at is null
+and a.deleted_at is null
+and c.id = 'da1b0dc3-e2a5-4930-9e5d-1dd6f7884717';

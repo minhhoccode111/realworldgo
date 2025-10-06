@@ -517,12 +517,21 @@ func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = body.Comment.Validate()
 	if err != nil {
-		WriteJSON(w, http.StatusUnprocessableEntity, err.Error())
+		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
 		return
 	}
 
 	commentId, err := s.db.CreateComment(r.Context(), currentUser.Id, slug, body.Comment.Body)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23502" { // not null constraint violation
+				WriteJSON(w, http.StatusUnprocessableEntity,
+					ErrorResponse{Error: "Article not found or invalid slug"},
+				)
+				return
+			}
+		}
 		log.Printf("Error inserting comment: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return

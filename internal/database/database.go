@@ -683,14 +683,67 @@ func (s *service) CreateComment(
 	ctx context.Context,
 	currentUserId, slug, body string,
 ) (string, error) {
-	return "", nil
+	query := `
+		insert into comments (author_id, article_id, body)
+		values (
+		  $1,
+		  (select id from articles where slug = $2 and deleted_at is null),
+		  $3
+		)
+		returning id;
+	`
+
+	var commentId string
+	err := s.db.QueryRowContext(ctx, query, currentUserId, slug, body).Scan(&commentId)
+	if err != nil {
+		return "", err
+	}
+
+	return commentId, nil
 }
 
 func (s *service) SelectCommentDetail(
 	ctx context.Context,
-	currentUserid, slug string,
+	currentUserId, commentId string,
 ) (*CommentDetail, error) {
-	return nil, nil
+	query := `
+		select c.id, c.body, c.created_at,
+		  u.username, u.bio, u.image,
+		  (select exists (
+			select 1 from follows
+			where follower_id::text = $1
+			and following_id = c.author_id
+		  )) as following
+		from comments c
+		left join users u on u.id = c.author_id
+		left join articles a on a.id = c.article_id
+		where c.deleted_at is null
+		and a.deleted_at is null
+		and c.id = $2;
+	`
+
+	/*
+		example query output:
+		                  id                  |  body  |          created_at           | username | bio | image | following
+		--------------------------------------+--------+-------------------------------+----------+-----+-------+-----------
+		 da1b0dc3-e2a5-4930-9e5d-1dd6f7884717 | body 0 | 2025-10-06 13:45:43.116717+00 | asd0     |     |       | f
+	*/
+
+	commentDetail := CommentDetail{}
+	err := s.db.QueryRowContext(ctx, query, currentUserId, commentId).Scan(
+		&commentDetail.Id,
+		&commentDetail.Body,
+		&commentDetail.CreatedAt,
+		&commentDetail.Author.Username,
+		&commentDetail.Author.Bio,
+		&commentDetail.Author.Image,
+		&commentDetail.Author.Following,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &commentDetail, nil
 }
 
 func (s *service) IsFollowing(ctx context.Context, followerId, followingName string) (bool, error) {
