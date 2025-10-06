@@ -214,3 +214,8 @@ and deleted_at is null;
 update articles
 set slug = 'slug', title = 'title', description = 'description', body = 'body'
 where id::text = '';
+
+-- delete an article by setting its deleted_at to now()
+update articles
+set deleted_at = now()
+where id::text = '' and author_id::text = '';

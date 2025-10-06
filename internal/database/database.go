@@ -17,6 +17,8 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
+// WARN: remember, every query must take deleted_at into consideration
+
 // Service represents a service that interacts with a database.
 type Service interface {
 	// Health returns a map of health status information.
@@ -47,6 +49,9 @@ type Service interface {
 
 	// UpdateUser updates the email of a user in the database.
 	UpdateArticle(ctx context.Context, newArticle *Article) (string, error)
+
+	// DeleteArticle soft deletes the article
+	DeleteArticle(ctx context.Context, authorId, slug string) error
 
 	// SelectArticles returns a list of articles from the database
 	SelectArticles(
@@ -241,6 +246,7 @@ func (s *service) UpdateUser(ctx context.Context, newUser *User) error {
 }
 
 func (s *service) CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error) {
+	// INFO: how about articles that have deleted_at? Should we take into account?
 	// if an article try to update with its same old slug, we can skip
 	query := `
 	select exists (
@@ -357,7 +363,7 @@ func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (strin
 	query := `
 		update articles
 		set slug = $1, title = $2, description = $3, body = $4
-		where id = $5;
+		where id = $5 and deleted_at is null;
 	`
 
 	_, err = s.db.ExecContext(ctx, query,
@@ -372,6 +378,21 @@ func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (strin
 	}
 
 	return newArticle.Slug, nil
+}
+
+func (s *service) DeleteArticle(ctx context.Context, authorId, slug string) error {
+	query := `
+	update articles
+	set deleted_at = now()
+	where author_id = $1 and slug = $2
+	`
+
+	_, err := s.db.ExecContext(ctx, query, authorId, slug)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *service) SelectArticles(

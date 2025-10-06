@@ -13,6 +13,7 @@
 @token0 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjAxMDUzMTYsImlhdCI6MTc1OTI0MTMxNiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjdjNmVjZjlkLTBjMGQtNDNmNy05NTlmLWYzOTc3MDZhNzYwZSJ9.9D5b9AXg_K6_rv1bJEHxaSG7dIlzjmsmBUzdEfzIbr0
 @token1 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjA1MTI3NzIsImlhdCI6MTc1OTY0ODc3MiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjQzMGU1ZjI3LTNhYWYtNDhkNS1iOWFiLWE0ZjM2NGRkODExOSJ9.ASsV1JtaxkSrOoPlmLrErNAFo82B3Vkk3kO997drFkw
 @slug = slug
+@slug = title-cannot-be-empty-10
 @commentId = 123
 
 ### Register
