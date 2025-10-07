@@ -283,3 +283,12 @@ values (
   'd89b1945-3193-435d-90c6-b6da95317893',
   (select id from articles where slug = 'slug' and deleted_at is null)
 );
+
+-- current user unfavorite an article by its slug
+delete from favorites
+where user_id = ''
+and article_id = (
+  select id from articles
+  where slug = ''
+  and deleted_at is null
+);

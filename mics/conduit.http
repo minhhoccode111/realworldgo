@@ -164,14 +164,10 @@ Authorization: Token {{token}}
 
 ### Favorite Article
 POST {{api}}/articles/slug/favorite
-Authorization: Token {{token1}}
-
-### Articles Favorited by Username with auth
-GET {{api}}/articles?favorited={{username}}
 Authorization: Token {{token}}
 
 ### Unfavorite Article
-DELETE {{api}}/articles/{{slug}}/favorite
+DELETE {{api}}/articles/slug/favorite
 Authorization: Token {{token}}
 
 ### Create Comment for Article

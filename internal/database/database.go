@@ -100,6 +100,9 @@ type Service interface {
 
 	// CreateFavorite creates a new favorite for the article
 	CreateFavorite(ctx context.Context, currentUserId, slug string) error
+
+	// DeleteFavorite deletes a favorite for the article
+	DeleteFavorite(ctx context.Context, currentUserId, slug string) error
 }
 
 type service struct {
@@ -921,6 +924,25 @@ func (s *service) CreateFavorite(ctx context.Context, currentUserId, slug string
 		values (
 		  $1,
 		  (select id from articles where slug = $2 and deleted_at is null)
+		);
+	`
+
+	_, err := s.db.QueryContext(ctx, query, currentUserId, slug)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) DeleteFavorite(ctx context.Context, currentUserId, slug string) error {
+	query := `
+		delete from favorites
+		where user_id = $1
+		and article_id = (
+		  select id from articles
+		  where slug = $2
+		  and deleted_at is null
 		);
 	`
 

@@ -506,6 +506,52 @@ func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := s.db.CreateFavorite(r.Context(), currentUser.Id, slug)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if !errors.As(err, &pgErr) {
+			log.Printf("Error creating favorite: %v", err)
+			WriteJSON(w, http.StatusInternalServerError,
+				ErrorResponse{Error: err.Error()},
+			)
+			return
+		}
+
+		if pgErr.Code != "23505" {
+			log.Printf("Error creating favorite: %v", err)
+			WriteJSON(w, http.StatusInternalServerError,
+				ErrorResponse{Error: err.Error()},
+			)
+			return
+		}
+
+		// skip error if it's unique constraint violation, to behave like unfavorite
+	}
+
+	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, slug)
+	if err != nil {
+		log.Printf("Error selecting article detail: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, ArticleDetailResponse{Article: *articleDetail})
+}
+
+func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+
+	err := s.db.DeleteFavorite(r.Context(), currentUser.Id, slug)
+	if err != nil {
 		log.Printf("Error creating favorite: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
@@ -520,8 +566,6 @@ func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 
 	WriteJSON(w, http.StatusOK, ArticleDetailResponse{Article: *articleDetail})
 }
-
-func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {}
 
 func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
