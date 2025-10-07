@@ -163,8 +163,8 @@ Authorization: Token {{token}}
 }
 
 ### Favorite Article
-POST {{api}}/articles/{{slug}}/favorite
-Authorization: Token {{token}}
+POST {{api}}/articles/slug/favorite
+Authorization: Token {{token1}}
 
 ### Articles Favorited by Username with auth
 GET {{api}}/articles?favorited={{username}}

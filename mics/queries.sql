@@ -276,3 +276,10 @@ and exists (
 )
 and c.id = ''
 and c.deleted_at is null;
+
+-- current user favorite an active article by its slug
+insert into favorites (user_id, article_id)
+values (
+  'd89b1945-3193-435d-90c6-b6da95317893',
+  (select id from articles where slug = 'slug' and deleted_at is null)
+);

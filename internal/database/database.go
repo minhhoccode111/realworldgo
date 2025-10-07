@@ -97,6 +97,9 @@ type Service interface {
 
 	// DeleteFollow deletes a follower for the followingUsername
 	DeleteFollow(ctx context.Context, followerId, followingUsername string) error
+
+	// CreateFavorite creates a new favorite for the article
+	CreateFavorite(ctx context.Context, currentUserId, slug string) error
 }
 
 type service struct {
@@ -905,6 +908,23 @@ func (s *service) DeleteFollow(
 		followerId,
 		followingUsername,
 	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) CreateFavorite(ctx context.Context, currentUserId, slug string) error {
+	query := `
+		insert into favorites (user_id, article_id)
+		values (
+		  $1,
+		  (select id from articles where slug = $2 and deleted_at is null)
+		);
+	`
+
+	_, err := s.db.QueryContext(ctx, query, currentUserId, slug)
 	if err != nil {
 		return err
 	}

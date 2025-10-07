@@ -490,7 +490,37 @@ func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusNoContent, nil)
 }
 
-func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request)   {}
+func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+
+	err := s.db.CreateFavorite(r.Context(), currentUser.Id, slug)
+	if err != nil {
+		log.Printf("Error creating favorite: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, slug)
+	if err != nil {
+		log.Printf("Error selecting article detail: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, ArticleDetailResponse{Article: *articleDetail})
+}
+
 func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {}
 
 func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
