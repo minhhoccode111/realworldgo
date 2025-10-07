@@ -30,7 +30,7 @@ func (c *CommentCreate) Validate() error {
 }
 
 type CommentDetail struct {
-	Id        string
+	Id        string         `json:"id"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	Body      string         `json:"body"`

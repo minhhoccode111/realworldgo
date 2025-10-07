@@ -67,7 +67,8 @@ func (s *Server) registerV1Routes(r *mux.Router) {
 
 	r.HandleFunc("/articles/{slug}/comments", optionalAuth(s.GetCommentsHandler)).Methods("GET")
 	r.HandleFunc("/articles/{slug}/comments", auth(s.PostCommentsHandler)).Methods("POST")
-	r.HandleFunc("/articles/{slug}/comments/{id}", auth(s.DeleteCommentsHandler)).Methods("DELETE")
+	r.HandleFunc("/articles/{slug}/comments/{commentId}", auth(s.DeleteCommentsHandler)).
+		Methods("DELETE")
 
 	r.HandleFunc("/profiles/{username}", optionalAuth(s.GetProfilehandler)).Methods("GET")
 	r.HandleFunc("/profiles/{username}/follow", auth(s.PostFollowHandler)).Methods("POST")
@@ -590,7 +591,39 @@ func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, CommentDetailResponse{Comment: *commentDetail})
 }
 
-func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := r.Context().Value(CtxUserKey).(User)
+	if !ok {
+		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		return
+	}
+
+	vars := mux.Vars(r)
+	slug, ok := vars["slug"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		return
+	}
+	commentId, ok := vars["commentId"]
+	if !ok {
+		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "commentId is required"})
+		return
+	}
+
+	err := s.db.DeleteComment(r.Context(), currentUser.Id, slug, commentId)
+	if err != nil {
+		if err.Error() == "zero rows affected" {
+			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: err.Error()})
+			return
+		}
+		log.Printf("Error deleting comment: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusNoContent, nil)
+}
+
 func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)

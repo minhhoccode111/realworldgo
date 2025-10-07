@@ -86,6 +86,9 @@ type Service interface {
 		currentUserId, commentId string,
 	) (*CommentDetail, error)
 
+	// DeleteComment soft deletes the comment
+	DeleteComment(ctx context.Context, currentUserId, slug, commentId string) error
+
 	// IsFollowing checks if the follower is following the followingName
 	IsFollowing(ctx context.Context, followerId, followingName string) (bool, error)
 
@@ -813,6 +816,35 @@ func (s *service) SelectCommentDetail(
 	}
 
 	return &commentDetail, nil
+}
+
+func (s *service) DeleteComment(ctx context.Context, currentUserId, slug, commentId string) error {
+	query := `
+		update comments
+		set deleted_at = now()
+		where author_id = $1
+		and exists (
+		  select 1 from articles
+		  where id = article_id
+		  and slug = $2
+		  and deleted_at is null
+		)
+		and id = $3;
+	`
+
+	result, err := s.db.ExecContext(ctx, query, currentUserId, slug, commentId)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("zero rows affected")
+	}
+
+	return nil
 }
 
 func (s *service) IsFollowing(ctx context.Context, followerId, followingName string) (bool, error) {

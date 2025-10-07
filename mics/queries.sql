@@ -263,3 +263,16 @@ group by a.id, u.id, c.id
 order by c.created_at -- latest bottom
 limit 10
 offset 0;
+
+-- delete a comment in an article by setting its deleted_at to now()
+update comments c
+set c.deleted_at = now()
+where c.author_id = ''
+and exists (
+  select 1 from articles a
+  where a.id = c.article_id
+  and a.slug = ''
+  and a.deleted_at is null
+)
+and c.id = ''
+and c.deleted_at is null;

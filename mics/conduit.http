@@ -199,6 +199,8 @@ Authorization: Token {{token}}
 GET {{api}}/articles/{{slug}}/comments
 
 ### Delete Comment for Article
+@commentId = f342d4d6-3b20-4440-a317-1056ac8fa458
+###
 DELETE {{api}}/articles/{{slug}}/comments/{{commentId}}
 Authorization: Token {{token}}
 
