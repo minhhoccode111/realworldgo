@@ -243,3 +243,23 @@ left join articles a on a.id = c.article_id
 where c.deleted_at is null
 and a.deleted_at is null
 and c.id = 'da1b0dc3-e2a5-4930-9e5d-1dd6f7884717';
+
+-- select all comments of an article, author profile and personalize with current user
+select c.id, c.body, c.created_at,
+  u.username, u.bio, u.image,
+  (select exists (
+    select 1 from follows
+    where follower_id::text = 'd89b1945-3193-435d-90c6-b6da95317893'
+    and following_id = c.author_id
+  )) as following,
+  count(*) over() as comments_count
+from comments c
+left join users u on u.id = c.author_id
+left join articles a on a.id = c.article_id
+where c.deleted_at is null
+and a.deleted_at is null
+and a.slug = ''
+group by a.id, u.id, c.id
+order by c.created_at -- latest bottom
+limit 10
+offset 0;

@@ -73,12 +73,12 @@ type Service interface {
 	// CreateComment creates a new comment on an article
 	CreateComment(ctx context.Context, slug, currentUserId, body string) (string, error)
 
-	// TODO: SelectComments returns a list of comments
+	// SelectComments returns a list of comments
 	SelectComments(
 		ctx context.Context,
-		currentUserId, tag, author, favorited string,
+		currentUserId, slug string,
 		limit, offset int,
-	) (articles []ArticlePreview, articlesCount int, err error)
+	) (articles []CommentDetail, articlesCount int, err error)
 
 	// SelectCommentDetail returns a comment (with body), author, and relationship between current user and the author
 	SelectCommentDetail(
@@ -707,6 +707,68 @@ func (s *service) CreateComment(
 	}
 
 	return commentId, nil
+}
+
+func (s *service) SelectComments(
+	ctx context.Context,
+	currentUserId, slug string,
+	limit, offset int,
+) (comments []CommentDetail, commentsCount int, err error) {
+	query := `
+		select c.id, c.body, c.created_at,
+		  u.username, u.bio, u.image,
+		  (select exists (
+			select 1 from follows
+			where follower_id::text = $1
+			and following_id = c.author_id
+		  )) as following,
+		  count(*) over() as comments_count
+		from comments c
+		left join users u on u.id = c.author_id
+		left join articles a on a.id = c.article_id
+		where c.deleted_at is null
+		and a.deleted_at is null
+		and a.slug = $2
+		group by a.id, u.id, c.id
+		order by c.created_at
+		limit $3
+		offset $4;
+	`
+
+	/*
+		example query output:
+		                  id                  |               body               |          created_at           |    username    |      bio      |                     image                      | following | comments_count
+		--------------------------------------+----------------------------------+-------------------------------+----------------+---------------+------------------------------------------------+-----------+----------------
+		 4925ab3e-9faf-4d6c-9343-ac9291ac56d9 | asd1 created a comment           | 2025-10-07 11:37:18.00979+00  | minhhoccode111 | i like golang | https://www.w3schools.com/howto/img_avatar.png | t         |             12
+	*/
+
+	rows, err := s.db.QueryContext(ctx, query, currentUserId, slug, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	comments = []CommentDetail{}
+	for rows.Next() {
+		var c CommentDetail
+		err := rows.Scan(
+			&c.Id,
+			&c.Body,
+			&c.CreatedAt,
+			&c.Author.Username,
+			&c.Author.Bio,
+			&c.Author.Image,
+			&c.Author.Following,
+			&commentsCount,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		comments = append(comments, c)
+	}
+
+	return comments, commentsCount, nil
 }
 
 func (s *service) SelectCommentDetail(

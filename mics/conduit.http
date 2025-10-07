@@ -175,17 +175,24 @@ DELETE {{api}}/articles/{{slug}}/favorite
 Authorization: Token {{token}}
 
 ### Create Comment for Article
-POST {{api}}/articles/{{slug}}/comments
+POST {{api}}/articles/{{slug}}asd/comments
 Authorization: Token {{token}}
 
 {
     "comment": {
-        "body": "Thank you so much!"
+        "body": "minhhoccode111 created a comment"
     }
 }
 
-### All Comments for Article
+### Get Comments for Article, without auth
 GET {{api}}/articles/{{slug}}/comments
+    ?limit=10
+    &offset=0
+
+### Get Comments for Article, with auth
+GET {{api}}/articles/{{slug}}/comments
+    ?limit=10
+    &offset=0
 Authorization: Token {{token}}
 
 ### All Comments for Article without login
@@ -204,8 +211,8 @@ GET {{api}}/profiles/{{username}}
 Authorization: Token {{token}}
 
 ### Follow Profile
-POST {{api}}/profiles/{{username0}}/follow
-Authorization: Token {{token0}}
+POST {{api}}/profiles/{{username}}/follow
+Authorization: Token {{token}}
 
 ### Unfollow Profile
 DELETE {{api}}/profiles/{{username}}/follow
