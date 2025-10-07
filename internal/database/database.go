@@ -103,6 +103,9 @@ type Service interface {
 
 	// DeleteFavorite deletes a favorite for the article
 	DeleteFavorite(ctx context.Context, currentUserId, slug string) error
+
+	// SelectTags returns a list of tags
+	SelectTags(ctx context.Context, limit, offset int) error
 }
 
 type service struct {
@@ -951,5 +954,17 @@ func (s *service) DeleteFavorite(ctx context.Context, currentUserId, slug string
 		return err
 	}
 
+	return nil
+}
+
+func (s *service) SelectTags(ctx context.Context, limit, offset int) error {
+	query := `
+		select distinct t.name,
+		  count(*) over() as tags_count
+		from tags t
+		order by t.name
+		limit $1
+		offset $2;
+	`
 	return nil
 }

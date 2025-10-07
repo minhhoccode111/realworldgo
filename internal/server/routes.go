@@ -830,4 +830,8 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, ProfilePreviewResponse{Profile: *profilePreview})
 }
 
-func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request) {
+	// 0. extract limit, offset
+	// 1. query database for tags distinct
+	// 2. response
+}

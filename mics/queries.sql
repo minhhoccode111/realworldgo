@@ -292,3 +292,11 @@ and article_id = (
   where slug = ''
   and deleted_at is null
 );
+
+-- get all tags
+select distinct t.name,
+  count(*) over() as tags_count
+from tags t
+order by t.name
+limit 5
+offset 0;
