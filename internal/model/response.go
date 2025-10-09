@@ -6,6 +6,10 @@ type ErrorResponse struct {
 	Code    int    `json:"code,omitempty"`
 }
 
+func NewError(err error) ErrorResponse {
+	return ErrorResponse{Error: err.Error()}
+}
+
 // UserAuthResponse
 type UserAuthResponse struct {
 	User UserAuth `json:"user"`
@@ -36,4 +40,11 @@ type CommentsResponse struct {
 	CommentsCount int             `json:"comments_count"`
 	Limit         int             `json:"limit"`
 	Offset        int             `json:"offset"`
+}
+
+type TagsResponse struct {
+	Tags      []TagName `json:"tags"`
+	TagsCount int       `json:"tags_count"`
+	Limit     int       `json:"limit"`
+	Offset    int       `json:"offset"`
 }

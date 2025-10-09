@@ -831,7 +831,19 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request) {
-	// 0. extract limit, offset
-	// 1. query database for tags distinct
-	// 2. response
+	_, _, _, limit, offset := SearchQueries(w, r)
+
+	tags, tagsCount, err := s.db.SelectTags(r.Context(), limit, offset)
+	if err != nil {
+		log.Printf("Error selecting tags: %v", err)
+		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, TagsResponse{
+		Tags:      tags,
+		TagsCount: tagsCount,
+		Limit:     limit,
+		Offset:    offset,
+	})
 }

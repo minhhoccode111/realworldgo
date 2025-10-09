@@ -105,7 +105,7 @@ type Service interface {
 	DeleteFavorite(ctx context.Context, currentUserId, slug string) error
 
 	// SelectTags returns a list of tags
-	SelectTags(ctx context.Context, limit, offset int) error
+	SelectTags(ctx context.Context, limit, offset int) (tags []TagName, tagsCount int, err error)
 }
 
 type service struct {
@@ -957,7 +957,10 @@ func (s *service) DeleteFavorite(ctx context.Context, currentUserId, slug string
 	return nil
 }
 
-func (s *service) SelectTags(ctx context.Context, limit, offset int) error {
+func (s *service) SelectTags(
+	ctx context.Context,
+	limit, offset int,
+) (tags []TagName, tagsCount int, err error) {
 	query := `
 		select distinct t.name,
 		  count(*) over() as tags_count
@@ -966,5 +969,27 @@ func (s *service) SelectTags(ctx context.Context, limit, offset int) error {
 		limit $1
 		offset $2;
 	`
-	return nil
+
+	rows, err := s.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	defer rows.Close()
+
+	tags = []TagName{}
+	for rows.Next() {
+		var t TagName
+		err := rows.Scan(
+			&t,
+			&tagsCount,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		tags = append(tags, t)
+	}
+
+	return tags, tagsCount, nil
 }

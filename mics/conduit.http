@@ -218,3 +218,5 @@ Authorization: Token {{token0}}
 
 ### All Tags
 GET {{api}}/tags
+    ?limit=5
+    &offset=5
