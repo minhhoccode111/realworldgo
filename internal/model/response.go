@@ -10,7 +10,6 @@ func NewError(err error) ErrorResponse {
 	return ErrorResponse{Error: err.Error()}
 }
 
-// UserAuthResponse
 type UserAuthResponse struct {
 	User UserAuth `json:"user"`
 }
@@ -19,7 +18,6 @@ type ArticleDetailResponse struct {
 	Article ArticleDetail `json:"article"`
 }
 
-// ArticlesResponse preview a list of articles
 type ArticlesResponse struct {
 	Articles      []ArticlePreview `json:"articles"`
 	ArticlesCount int              `json:"articlesCount"`

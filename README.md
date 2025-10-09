@@ -2,26 +2,12 @@
 
 > ### Golang codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
 
-### [Demo](https://demo.realworld.build/)&nbsp;&nbsp;&nbsp;&nbsp;[RealWorld](https://github.com/gothinkster/realworld)
-
-This codebase was created to demonstrate a fully fledged fullstack application built with **Golang** including CRUD operations, authentication, routing, pagination, and more.
-
-We've gone to great lengths to adhere to the **Golang** community styleguides & best practices.
-
 For more information on how to this works with other frontends/backends, head over to the [RealWorld](https://github.com/gothinkster/realworld) repo.
-
-## How it works
-
-> Describe the general architecture of your app here
-
-## Getting started
-
-> docker compose up
 
 ## [Endpoints](https://docs.realworld.show/specifications/backend/endpoints/)
 
 ```http
-     # Auth
+       # Auth
 POST   /users
 POST   /users/login
 GET    /user
@@ -107,14 +93,34 @@ idx    - name      - unique
 
 ## Concepts Learned
 
-- N+1 Problem
-- `where id::text = '...'`
-- `select exists (select 1 from tags where name = 'ts');`
-- `CROSS JOIN`
+- A project file structure that I like :)
+- Concurrency
+- Transaction, Rollback, Commit
+- Batch Insert to improve performance
+- `QueryRowContext` returns a single row
+- `QueryContext` returns multiple rows, which we have to `.Close()` manually
 - `LEFT JOIN`
+- `RETURNING id`
+- `N+1 Problem` like get all author profiles after we get all the articles
+- `WHERE id::TEXT = '...'` to prevent exception when `id` is not a uuid
+- `SELECT EXISTS (SELECT 1 FROM ... WHERE ...);` to check for existence
+- `CROSS JOIN` to combine all rows from one table to all rows in another table
+- `STRING_AGG(t.name, ', ')` to aggregate tags into one column as a string
+- `COALESCE(ARRAY_AGG(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '{}')`
+  to aggregate tags into one column as an array
+- `var tags pq.StringArray` represents a one-dimensional array of the PostgreSQL
+  character types, then `[]string(tags)` to get array of strings
+- `COUNT(DISTINCT id)` to count the number of distinct rows
+- `COUNT(*) OVER()` to count all rows that match the `WHERE` before applying `LIMIT` and `OFFSET`
+- `WHERE ('' = $1 OR username = $1)` skip if empty
+- `ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name` if insert (or update) conflict
+  update the old value to new value (same)
+- `ON CONFLICT DO NOTHING`
 
 ## Todo
 
+- [ ] Tag can be a slice of strings
+- [ ] Allow update article's tags
 - [ ] Add tests with Ginkgo and Gomega
 - [ ] Add cache with Redis
 - [ ] Add notifications with SSE + RabbitMQ + Redis Pub/Sub Architecture

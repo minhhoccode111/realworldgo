@@ -4,7 +4,7 @@ before:
   - go mod tidy
 
 env:
-  - PACKAGE_PATH=github.com/minhhoccode111/auth_project_practice/cmd
+  - PACKAGE_PATH=github.com/minhhoccode111/realworldgo/cmd
 
 builds:
 - binary: "{{ .ProjectName }}"

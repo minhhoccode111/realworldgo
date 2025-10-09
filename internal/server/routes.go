@@ -335,7 +335,6 @@ func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: allow filter feed?
 	_, _, _, limit, offset := SearchQueries(w, r)
 
 	articles, articlesCount, err := s.db.SelectArticlesFeed(

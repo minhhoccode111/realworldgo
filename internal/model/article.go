@@ -101,25 +101,6 @@ type ArticleDetail struct {
 	Body           string         `json:"body"`
 }
 
-// ToArticleDetail attachs 'author' and 'tagList' to Article model to make it an ArticleDetail
-func (a *Article) ToArticleDetail(
-	author ProfilePreview,
-	tagList []string,
-) *ArticleDetail {
-	return &ArticleDetail{
-		Slug:           a.Slug,
-		Title:          a.Title,
-		Description:    a.Description,
-		CreatedAt:      a.CreatedAt,
-		UpdatedAt:      a.UpdatedAt,
-		Favorited:      false,
-		FavoritesCount: 0,
-		Author:         author,
-		TagList:        tagList,
-		Body:           a.Body,
-	}
-}
-
 // ArticlePreview is article without body
 type ArticlePreview struct {
 	Slug           string         `json:"slug"`

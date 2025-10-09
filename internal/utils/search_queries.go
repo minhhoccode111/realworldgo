@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// TODO: tag can be a slice of string
+// TODO: tag can be a slice of strings
 func SearchQueries(
 	w http.ResponseWriter,
 	r *http.Request,

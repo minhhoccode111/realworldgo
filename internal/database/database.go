@@ -38,8 +38,8 @@ type Service interface {
 	// UpdateUser updates a user
 	UpdateUser(ctx context.Context, newUser *User) error
 
-	// CanSlugBeUSed checks if an article with the given slug already exists
-	CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error)
+	// IsSlugExisted checks if an article with the given slug already exists
+	IsSlugExisted(ctx context.Context, articleId, slug string) (bool, error)
 
 	// CreateArticle inserts a new user
 	CreateArticle(ctx context.Context, newArticle *Article, tags []string) (string, error)
@@ -273,9 +273,8 @@ func (s *service) UpdateUser(ctx context.Context, newUser *User) error {
 	return err
 }
 
-func (s *service) CanSlugBeUSed(ctx context.Context, articleId, slug string) (bool, error) {
-	// INFO: how about articles that have deleted_at? Should we take into account?
-	// if an article try to update with its same old slug, we can skip
+func (s *service) IsSlugExisted(ctx context.Context, articleId, slug string) (bool, error) {
+	// if an article try to update with its same old slug, we can ignore
 	query := `
 	select exists (
 		select 1 from articles
@@ -324,7 +323,7 @@ func (s *service) CreateArticle(
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
 		var existed bool
-		existed, err = s.CanSlugBeUSed(ctx, "", newArticle.Slug)
+		existed, err = s.IsSlugExisted(ctx, "", newArticle.Slug)
 		if err != nil {
 			return "", err
 		}
@@ -651,7 +650,7 @@ func (s *service) UpdateArticle(ctx context.Context, newArticle *Article) (strin
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
 		var existed bool
-		existed, err = s.CanSlugBeUSed(ctx, newArticle.Id, newArticle.Slug)
+		existed, err = s.IsSlugExisted(ctx, newArticle.Id, newArticle.Slug)
 		if err != nil {
 			return "", err
 		}

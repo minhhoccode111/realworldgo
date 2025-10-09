@@ -20,9 +20,9 @@ services:
       psql:
         condition: service_healthy
     networks:
-      - auth_project_practice
+      - app_network
   psql:
-    image: postgres:latest
+    image: postgres:17
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -39,9 +39,9 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - auth_project_practice
+      - app_network
 
 volumes:
   psql_volume:
 networks:
-  auth_project_practice:
+  app_network:
