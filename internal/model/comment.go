@@ -7,12 +7,13 @@ import (
 )
 
 type Comment struct {
-	Id        string    `json:"id"`
-	ArticleId string    `json:"article_id"`
-	AuthorId  string    `json:"author_id"`
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
-	DeletedAt time.Time `json:"deleted_at"`
+	Id        string
+	ArticleId string
+	AuthorId  string
+	Body      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 }
 
 type CommentCreate struct {

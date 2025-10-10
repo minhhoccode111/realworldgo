@@ -447,6 +447,7 @@ func (s *service) SelectArticles(
 	}
 	defer rows.Close()
 
+	articles = []ArticlePreview{}
 	for rows.Next() {
 		var a ArticlePreview
 		var tags pq.StringArray
@@ -530,6 +531,7 @@ func (s *service) SelectArticlesFeed(
 	}
 	defer rows.Close()
 
+	articles = []ArticlePreview{}
 	for rows.Next() {
 		var a ArticlePreview
 		var tags pq.StringArray
@@ -561,7 +563,7 @@ func (s *service) SelectArticlesFeed(
 		return nil, 0, err
 	}
 
-	return nil, 0, err
+	return articles, articlesCount, err
 }
 
 func (s *service) SelectArticle(ctx context.Context, slug string) (*Article, error) {
@@ -726,7 +728,7 @@ func (s *service) SelectComments(
 	limit, offset int,
 ) (comments []CommentDetail, commentsCount int, err error) {
 	query := `
-		select c.id, c.body, c.created_at,
+		select c.id, c.body, c.created_at, c.updated_at,
 		  u.username, u.bio, u.image,
 		  (select exists (
 			select 1 from follows
@@ -766,6 +768,7 @@ func (s *service) SelectComments(
 			&c.Id,
 			&c.Body,
 			&c.CreatedAt,
+			&c.UpdatedAt,
 			&c.Author.Username,
 			&c.Author.Bio,
 			&c.Author.Image,
@@ -787,7 +790,7 @@ func (s *service) SelectCommentDetail(
 	currentUserId, commentId string,
 ) (*CommentDetail, error) {
 	query := `
-		select c.id, c.body, c.created_at,
+		select c.id, c.body, c.created_at, c.updated_at,
 		  u.username, u.bio, u.image,
 		  (select exists (
 			select 1 from follows
@@ -804,9 +807,9 @@ func (s *service) SelectCommentDetail(
 
 	/*
 		example query output:
-		                  id                  |  body  |          created_at           | username | bio | image | following
-		--------------------------------------+--------+-------------------------------+----------+-----+-------+-----------
-		 da1b0dc3-e2a5-4930-9e5d-1dd6f7884717 | body 0 | 2025-10-06 13:45:43.116717+00 | asd0     |     |       | f
+		                  id                  |  body  |          created_at           |          updated_at           | username | bio | image | following
+		--------------------------------------+--------+-------------------------------+-------------------------------+----------+-----+-------+-----------
+		 da1b0dc3-e2a5-4930-9e5d-1dd6f7884717 | body 0 | 2025-10-06 13:45:43.116717+00 | 2025-10-06 13:45:43.116717+00 | asd0     |     |       | f
 	*/
 
 	commentDetail := CommentDetail{}
@@ -814,6 +817,7 @@ func (s *service) SelectCommentDetail(
 		&commentDetail.Id,
 		&commentDetail.Body,
 		&commentDetail.CreatedAt,
+		&commentDetail.UpdatedAt,
 		&commentDetail.Author.Username,
 		&commentDetail.Author.Bio,
 		&commentDetail.Author.Image,

@@ -230,7 +230,7 @@ values (
 returning id;
 
 -- select a comment, author profile and personalize with current user
-select c.id, c.body, c.created_at,
+select c.id, c.body, c.created_at, c.updated_at,
   u.username, u.bio, u.image,
   (select exists (
     select 1 from follows

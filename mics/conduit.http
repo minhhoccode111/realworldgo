@@ -21,9 +21,9 @@ POST {{api}}/users
 
 {
     "user": {
-        "email": "{{email1}}",
-        "password": "{{password}}",
-        "username": "{{username1}}"
+        "email": "asd4@gmail.com",
+        "password": "Bruh0!0!",
+        "username": "asd4"
     }
 }
 
@@ -67,7 +67,7 @@ GET {{api}}/articles
 GET {{api}}/articles
     ?limit=10
     &offset=0
-    &author={{username0}}
+    &author=johnjacob
 
 ### All Articles without auth, with limit and offset, author, favorited
 GET {{api}}/articles

@@ -3,10 +3,10 @@ set -x
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-APIURL=${APIURL:-https://api.realworld.io/api}
-USERNAME=${USERNAME:-u`date +%s`}
-EMAIL=${EMAIL:-$USERNAME@mail.com}
-PASSWORD=${PASSWORD:-password}
+APIURL=http://localhost:9999/api/v1
+USERNAME=u`date +%s`
+EMAIL=$USERNAME@mail.com
+PASSWORD='Bruh0!0!'
 
 DELAY_REQUEST=${DELAY_REQUEST:-"500"}
 
