@@ -83,4 +83,14 @@ migrate-new:
 	fi; \
 	$(GOOSE) create $(name) sql -dir $(MIGRATIONS_DIR)
 
-.PHONY: all build run clean watch docker-run docker-down migrate-up migrate-down migrate-redo migrate-status migrate-new
+# Run the test suite
+test:
+	@echo "Running tests..."
+	@go test -v ./...
+
+# Run DB Integration Tests
+itest:
+	@echo "Running integration tests..."
+	@go test -v ./...
+
+.PHONY: all build run clean watch docker-run docker-down migrate-up migrate-down migrate-redo migrate-status migrate-new test itest
