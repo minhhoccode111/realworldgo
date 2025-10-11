@@ -43,7 +43,7 @@ GET    /tags
 
 ## [API Response Format](https://docs.realworld.show/specifications/backend/api-response-format/)
 
-## Database (NoSQL features are not allowed, even though PostgreSQL has them)
+## Database Design
 
 ```txt
 - Users
@@ -183,6 +183,38 @@ Clean up binary from the last build
 
 ```bash
 make clean
+```
+
+## Test Script
+
+Run the [test script](./api-test/run-api-tests.sh)
+
+```bash
+./api-test/run-api-tests.sh
+```
+
+Will produce an [output](./api-test/out) like this:
+
+```txt
+┌─────────────────────────┬──────────────────┬─────────────────┐
+│                         │         executed │          failed │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              iterations │                1 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│                requests │               32 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│            test-scripts │               48 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│      prerequest-scripts │               18 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              assertions │              335 │               0 │
+├─────────────────────────┴──────────────────┴─────────────────┤
+│ total run duration: 16.7s                                    │
+├──────────────────────────────────────────────────────────────┤
+│ total data received: 32.01kB (approx)                        │
+├──────────────────────────────────────────────────────────────┤
+│ average response time: 9ms [min: 1ms, max: 61ms, s.d.: 17ms] │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ## Contributing
