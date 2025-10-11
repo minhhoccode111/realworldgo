@@ -708,7 +708,6 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: add concurrency or use one single query instead of two
 	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
 	if errors.Is(err, sql.ErrNoRows) {
 		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
@@ -751,7 +750,6 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: add concurrency or use one single query instead of three
 	err := s.db.CreateFollow(r.Context(), currentUser.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error creating follow: %v", err)
@@ -795,7 +793,6 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: add concurrency or use one single query instead of three
 	err := s.db.DeleteFollow(r.Context(), currentUser.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error deleting follow: %v", err)

@@ -94,9 +94,9 @@ idx    - name      - unique
 ## Concepts Learned
 
 - A project file structure that I like :)
-- Concurrency
-- Transaction, Rollback, Commit
+- Transaction, Rollback (with `defer`), Commit
 - Batch Insert to improve performance
+- `values := []any{}` must be `[]any` to be used as `values...` in `db.QueryContext`
 - `QueryRowContext` returns a single row
 - `QueryContext` returns multiple rows, which we have to `.Close()` manually
 - `LEFT JOIN`
@@ -121,7 +121,7 @@ idx    - name      - unique
 
 - [ ] Tag can be a slice of strings
 - [ ] Allow update article's tags
-- [ ] Add tests with Ginkgo and Gomega
+- [ ] Add tests with standard `testing` package
 - [ ] Add cache with Redis
 - [ ] Add notifications with SSE + RabbitMQ + Redis Pub/Sub Architecture
 
@@ -180,3 +180,5 @@ Clean up binary from the last build
 ```bash
 make clean
 ```
+
+## Contributing

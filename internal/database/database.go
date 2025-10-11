@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gosimple/slug"
@@ -294,19 +295,12 @@ func (s *service) CreateArticle(
 	newArticle *Article,
 	tags []string,
 ) (newSlug string, err error) {
-	// 1. insert new article to db to generate id
-	// 2. create a list of tags, will return error if unique constraint fail
-	// 3. create rows in junction table between article and tags
-	// we can apply concurrency for 1. and 2.
-	// and we also need ACID transaction to make sure every query succeed
-
 	var tx *sql.Tx
 	tx, err = s.db.Begin()
 	if err != nil {
 		return "", err
 	}
 
-	// defer a rollback in case of an error or panic
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -316,9 +310,6 @@ func (s *service) CreateArticle(
 		}
 	}()
 
-	// TODO: add concurrency with goroutines and channels to improve performance
-
-	// insert an article, return its id
 	baseSlug := slug.Make(newArticle.Title)
 	newArticle.Slug = baseSlug
 	for i := 0; ; i++ {
@@ -350,36 +341,51 @@ func (s *service) CreateArticle(
 		return "", err
 	}
 
-	// TODO: if we have large number of tags, we need to use batch insert to improve performance
-	for _, tagName := range tags {
-		// insert or get existing tag
-		var tagId string
-		// `ON CONFLICT (name)`: if insert conflict on `name` col (unique constraint)
-		// `DO UPDATE SET name=EXCLUDED.name`: update the name to the new name (same)
-		// `EXCLUDED`: represent our newly inserted row
-		err := s.db.QueryRowContext(ctx, `
-				INSERT INTO tags (name)
-				VALUES ($1)
-				ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name
-				RETURNING id
-				`, tagName,
-		).Scan(&tagId)
+	// INFO: batch insert tags and article_tags to improve performance
+	placeholders := []string{}
+	values := []any{} // must be '[]any' to be used as 'values...' in 'db.QueryContext'
+	for i, tag := range tags {
+		placeholders = append(placeholders, fmt.Sprintf("($%d)", i+1))
+		values = append(values, tag)
+	}
+	insertQuery := fmt.Sprintf(
+		"INSERT INTO tags (name) VALUES %s ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+		strings.Join(placeholders, ","),
+	)
+
+	rows, err := s.db.QueryContext(ctx, insertQuery, values...)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		err := rows.Scan(&id)
 		if err != nil {
 			return "", err
 		}
 
-		// insert junction
-		_, err = s.db.ExecContext(ctx, `
-			insert into article_tags (article_id, tag_id)
-			values ($1, $2)
-			on conflict do nothing
-			`,
-			newArticle.Id,
-			tagId,
-		)
-		if err != nil {
-			return "", err
-		}
+		ids = append(ids, id)
+	}
+
+	placeholders = []string{}
+	values = []any{}
+
+	for i, id := range ids {
+		placeholders = append(placeholders, fmt.Sprintf("($%d,$%d)", i*2+1, i*2+2))
+		values = append(values, newArticle.Id, id)
+	}
+
+	insertQuery = fmt.Sprintf(
+		"INSERT INTO article_tags (article_id, tag_id) VALUES %s ON CONFLICT DO NOTHING",
+		strings.Join(placeholders, ","),
+	)
+
+	_, err = s.db.ExecContext(ctx, insertQuery, values...)
+	if err != nil {
+		return "", err
 	}
 
 	err = tx.Commit()

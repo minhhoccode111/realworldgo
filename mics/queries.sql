@@ -48,7 +48,7 @@ where t.name = 'tai';
 -- check if a user (id) follows another user (username)
 select exists (
   select 1 from follows
-  where follower_id = 'd89b1945-3193-435d-90c6-b6da95317893'
+  where follower_id::text = 'd89b1945-3193-435d-90c6-b6da95317893'
   and following_id = (
     select id from users
     where username = 'asd0'

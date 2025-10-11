@@ -10,7 +10,7 @@
 @bio = i like golang
 @image = https://www.w3schools.com/howto/img_avatar.png
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjAyNzEyMDgsImlhdCI6MTc1OTQwNzIwOCwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6ImQ4OWIxOTQ1LTMxOTMtNDM1ZC05MGM2LWI2ZGE5NTMxNzg5MyJ9.IgV3p6itLKkUCcaJDXbTpjDtz5PY16XisJgcoAJr4gg
-@token0 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjAxMDUzMTYsImlhdCI6MTc1OTI0MTMxNiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjdjNmVjZjlkLTBjMGQtNDNmNy05NTlmLWYzOTc3MDZhNzYwZSJ9.9D5b9AXg_K6_rv1bJEHxaSG7dIlzjmsmBUzdEfzIbr0
+@token0 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjEwMzI3MjIsImlhdCI6MTc2MDE2ODcyMiwiaXNzIjoicmVhbHdvcmxkZ28iLCJ1c2VySWQiOiI3YzZlY2Y5ZC0wYzBkLTQzZjctOTU5Zi1mMzk3NzA2YTc2MGUifQ.vDw6YRcze-n_xnXcjOhXCBoP8wj79JJ0OmGdePJCn0U
 @token1 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjA1MTI3NzIsImlhdCI6MTc1OTY0ODc3MiwiaXNzIjoiYmxvZ2FwaSIsInVzZXJJZCI6IjQzMGU1ZjI3LTNhYWYtNDhkNS1iOWFiLWE0ZjM2NGRkODExOSJ9.ASsV1JtaxkSrOoPlmLrErNAFo82B3Vkk3kO997drFkw
 @slug = slug
 @slug = title-cannot-be-empty-9
@@ -32,8 +32,8 @@ POST {{api}}/users/login
 
 {
     "user": {
-        "email": "{{email1}}",
-        "password": "{{password}}"
+        "email": "asd0@gmail.com",
+        "password": "Bruh0!0!"
     }
 }
 
@@ -127,7 +127,7 @@ Authorization: Token {{token0}}
         "title": "title",
         "description": "description",
         "body": "body",
-        "tagList": ["tag"]
+        "tagList": ["minh", "hoc", "code"]
     }
 }
 
@@ -218,5 +218,5 @@ Authorization: Token {{token0}}
 
 ### All Tags
 GET {{api}}/tags
-    ?limit=5
-    &offset=5
+    ?limit=20
+    &offset=0
