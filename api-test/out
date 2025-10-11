@@ -5,18 +5,18 @@ $ ./api-test/run-api-tests.sh
 + SCRIPTDIR=/home/mhc/projects/realworldgo/api-test
 + APIURL=http://localhost:9999/api/v1
 ++ date +%s
-+ USERNAME=u1760164983
-+ EMAIL=u1760164983@mail.com
++ USERNAME=u1760173288
++ EMAIL=u1760173288@mail.com
 + PASSWORD='Bruh0!0!'
 + DELAY_REQUEST=500
-+ npx newman run /home/mhc/projects/realworldgo/api-test/Conduit.postman_collection.json --delay-request 500 --global-var APIURL=http://localhost:9999/api/v1 --global-var USERNAME=u1760164983 --global-var EMAIL=u1760164983@mail.com --global-var 'PASSWORD=Bruh0!0!'
++ npx newman run /home/mhc/projects/realworldgo/api-test/Conduit.postman_collection.json --delay-request 500 --global-var APIURL=http://localhost:9999/api/v1 --global-var USERNAME=u1760173288 --global-var EMAIL=u1760173288@mail.com --global-var 'PASSWORD=Bruh0!0!'
 newman
 
 Conduit
 
 ❏ Auth
 ↳ Register
-  POST http://localhost:9999/api/v1/users [201 Created, 600B, 69ms]
+  POST http://localhost:9999/api/v1/users [201 Created, 600B, 61ms]
   ┌
   │ 'Using "environment" is deprecated. Use "pm.environmen
   │ t" instead.'
@@ -31,7 +31,7 @@ Conduit
   ✓  User has "token" property
 
 ↳ Login
-  POST http://localhost:9999/api/v1/users/login [200 OK, 595B, 63ms]
+  POST http://localhost:9999/api/v1/users/login [200 OK, 595B, 47ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -44,7 +44,7 @@ Conduit
   ✓  User has "token" property
 
 ↳ Login and Remember Token
-  POST http://localhost:9999/api/v1/users/login [200 OK, 595B, 56ms]
+  POST http://localhost:9999/api/v1/users/login [200 OK, 595B, 45ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -58,7 +58,7 @@ Conduit
   ✓  Global variable "token" has been set
 
 ↳ Current User
-  GET http://localhost:9999/api/v1/user [200 OK, 595B, 3ms]
+  GET http://localhost:9999/api/v1/user [200 OK, 595B, 2ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -71,7 +71,7 @@ Conduit
   ✓  User has "token" property
 
 ↳ Update User
-  PUT http://localhost:9999/api/v1/user [200 OK, 595B, 49ms]
+  PUT http://localhost:9999/api/v1/user [200 OK, 595B, 47ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -85,7 +85,7 @@ Conduit
 
 ❏ Articles
 ↳ All Articles
-  GET http://localhost:9999/api/v1/articles [200 OK, 7.71kB, 3ms]
+  GET http://localhost:9999/api/v1/articles [200 OK, 7.45kB, 3ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -111,7 +111,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Articles by Author
-  GET http://localhost:9999/api/v1/articles?author=johnjacob [200 OK, 333B, 3ms]
+  GET http://localhost:9999/api/v1/articles?author=johnjacob [200 OK, 333B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -125,7 +125,7 @@ Conduit
   ✓  articlesCount is 0 when feed is empty
 
 ↳ Articles Favorited by Username
-  GET http://localhost:9999/api/v1/articles?favorited=u1760165083 [200 OK, 333B, 3ms]
+  GET http://localhost:9999/api/v1/articles?favorited=u1760173288 [200 OK, 333B, 3ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -139,7 +139,7 @@ Conduit
   ✓  articlesCount is 0 when feed is empty
 
 ↳ Articles by Tag
-  GET http://localhost:9999/api/v1/articles?tag=dragons [200 OK, 2.02kB, 4ms]
+  GET http://localhost:9999/api/v1/articles?tag=dragons [200 OK, 2.02kB, 3ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -188,7 +188,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Feed
-  GET http://localhost:9999/api/v1/articles/feed [200 OK, 333B, 3ms]
+  GET http://localhost:9999/api/v1/articles/feed [200 OK, 333B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -202,7 +202,7 @@ Conduit
   ✓  articlesCount is 0 when feed is empty
 
 ↳ All Articles
-  GET http://localhost:9999/api/v1/articles [200 OK, 7.63kB, 3ms]
+  GET http://localhost:9999/api/v1/articles [200 OK, 7.39kB, 3ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -228,7 +228,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ All Articles with auth
-  GET http://localhost:9999/api/v1/articles [200 OK, 7.63kB, 4ms]
+  GET http://localhost:9999/api/v1/articles [200 OK, 7.39kB, 3ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -254,7 +254,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Articles by Author
-  GET http://localhost:9999/api/v1/articles?author=u1760165083 [200 OK, 678B, 2ms]
+  GET http://localhost:9999/api/v1/articles?author=u1760173288 [200 OK, 678B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -280,7 +280,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Articles by Author with auth
-  GET http://localhost:9999/api/v1/articles?author=u1760165083 [200 OK, 678B, 3ms]
+  GET http://localhost:9999/api/v1/articles?author=u1760173288 [200 OK, 678B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -306,7 +306,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Single Article by slug
-  GET http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21 [200 OK, 660B, 2ms]
+  GET http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29 [200 OK, 660B, 2ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -328,7 +328,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Articles by Tag
-  GET http://localhost:9999/api/v1/articles?tag=dragons [200 OK, 2.37kB, 3ms]
+  GET http://localhost:9999/api/v1/articles?tag=dragons [200 OK, 2.37kB, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -357,7 +357,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Update Article
-  PUT http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21 [200 OK, 658B, 7ms]
+  PUT http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29 [200 OK, 659B, 4ms]
   ┌
   │ 'Using "environment" is deprecated. Use "pm.environmen
   │ t" instead.'
@@ -381,7 +381,7 @@ Conduit
   ✓  favoritesCount is an integer
 
 ↳ Favorite Article
-  POST http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21/favorite [200 OK, 657B, 4ms]
+  POST http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29/favorite [200 OK, 658B, 3ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -405,7 +405,7 @@ Conduit
   ✓  Article's 'favoritesCount' property is greater than 0
 
 ↳ Articles Favorited by Username
-  GET http://localhost:9999/api/v1/articles?favorited=u1760165083 [200 OK, 676B, 3ms]
+  GET http://localhost:9999/api/v1/articles?favorited=u1760173288 [200 OK, 677B, 1ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -431,7 +431,7 @@ Conduit
   ✓  favoritesCount is 1
 
 ↳ Articles Favorited by Username with auth
-  GET http://localhost:9999/api/v1/articles?favorited=u1760165083 [200 OK, 676B, 3ms]
+  GET http://localhost:9999/api/v1/articles?favorited=u1760173288 [200 OK, 677B, 1ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -457,7 +457,7 @@ Conduit
   ✓  favoritesCount is 1
 
 ↳ Unfavorite Article
-  DELETE http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21/favorite [200 OK, 658B, 5ms]
+  DELETE http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29/favorite [200 OK, 659B, 2ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -480,7 +480,7 @@ Conduit
   ✓  Article's "favorited" property is false
 
 ↳ Create Comment for Article
-  POST http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21/comments [200 OK, 532B, 5ms]
+  POST http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29/comments [200 OK, 532B, 3ms]
   ┌
   │ 'Using "tests" is deprecated. Use "pm.test()" instead.
   │ '
@@ -495,7 +495,7 @@ Conduit
   ✓  Comment has "author" property
 
 ↳ All Comments for Article
-  GET http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21/comments [200 OK, 576B, 2ms]
+  GET http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29/comments [200 OK, 576B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -513,7 +513,7 @@ Conduit
   ✓  Comment has "author" property
 
 ↳ All Comments for Article without login
-  GET http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21/comments [200 OK, 576B, 2ms]
+  GET http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29/comments [200 OK, 576B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -531,14 +531,14 @@ Conduit
   ✓  Comment has "author" property
 
 ↳ Delete Comment for Article
-  DELETE http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21/comments/ec13ef79-783d-47ee-a618-584aaf7d10e5 [204 No Content, 265B, 3ms]
+  DELETE http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29/comments/88257ec9-ead5-42f0-a860-631233f6d575 [204 No Content, 265B, 2ms]
 
 ↳ Delete Article
-  DELETE http://localhost:9999/api/v1/articles/how-to-train-your-dragon-21 [204 No Content, 265B, 3ms]
+  DELETE http://localhost:9999/api/v1/articles/how-to-train-your-dragon-29 [204 No Content, 265B, 2ms]
 
 ❏ Profiles
 ↳ Register Celeb
-  POST http://localhost:9999/api/v1/users [201 Created, 612B, 69ms]
+  POST http://localhost:9999/api/v1/users [201 Created, 612B, 47ms]
   ┌
   │ 'Using "environment" is deprecated. Use "pm.environmen
   │ t" instead.'
@@ -553,7 +553,7 @@ Conduit
   ✓  User has "token" property
 
 ↳ Profile
-  GET http://localhost:9999/api/v1/profiles/celeb_u1760165083 [200 OK, 360B, 4ms]
+  GET http://localhost:9999/api/v1/profiles/celeb_u1760173288 [200 OK, 360B, 2ms]
   ┌
   │ 'Using "environment" is deprecated. Use "pm.environmen
   │ t" instead.'
@@ -570,7 +570,7 @@ Conduit
   ✓  Profile has "following" property
 
 ↳ Follow Profile
-  POST http://localhost:9999/api/v1/profiles/celeb_u1760165083/follow [200 OK, 359B, 3ms]
+  POST http://localhost:9999/api/v1/profiles/celeb_u1760173288/follow [200 OK, 359B, 2ms]
   ┌
   │ 'Using "environment" is deprecated. Use "pm.environmen
   │ t" instead.'
@@ -588,7 +588,7 @@ Conduit
   ✓  Profile's "following" property is true
 
 ↳ Unfollow Profile
-  DELETE http://localhost:9999/api/v1/profiles/celeb_u1760165083/follow [200 OK, 360B, 3ms]
+  DELETE http://localhost:9999/api/v1/profiles/celeb_u1760173288/follow [200 OK, 360B, 3ms]
   ┌
   │ 'Using "environment" is deprecated. Use "pm.environmen
   │ t" instead.'
@@ -607,7 +607,7 @@ Conduit
 
 ❏ Tags
 ↳ All Tags
-  GET http://localhost:9999/api/v1/tags [200 OK, 379B, 1ms]
+  GET http://localhost:9999/api/v1/tags [200 OK, 400B, 2ms]
   ┌
   │ 'Using "responseCode" is deprecated. Use "pm.response.
   │ code" instead.'
@@ -618,22 +618,22 @@ Conduit
   ✓  Response contains "tags" property
   ✓  "tags" property returned as array
 
-┌─────────────────────────┬──────────────────┬──────────────────┐
-│                         │         executed │           failed │
-├─────────────────────────┼──────────────────┼──────────────────┤
-│              iterations │                1 │                0 │
-├─────────────────────────┼──────────────────┼──────────────────┤
-│                requests │               32 │                0 │
-├─────────────────────────┼──────────────────┼──────────────────┤
-│            test-scripts │               48 │                0 │
-├─────────────────────────┼──────────────────┼──────────────────┤
-│      prerequest-scripts │               18 │                0 │
-├─────────────────────────┼──────────────────┼──────────────────┤
-│              assertions │              335 │                0 │
-├─────────────────────────┴──────────────────┴──────────────────┤
-│ total run duration: 16.9s                                     │
-├───────────────────────────────────────────────────────────────┤
-│ total data received: 32.74kB (approx)                         │
-├───────────────────────────────────────────────────────────────┤
-│ average response time: 12ms [min: 1ms, max: 69ms, s.d.: 21ms] │
-└───────────────────────────────────────────────────────────────┘
+┌─────────────────────────┬──────────────────┬─────────────────┐
+│                         │         executed │          failed │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              iterations │                1 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│                requests │               32 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│            test-scripts │               48 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│      prerequest-scripts │               18 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              assertions │              335 │               0 │
+├─────────────────────────┴──────────────────┴─────────────────┤
+│ total run duration: 16.7s                                    │
+├──────────────────────────────────────────────────────────────┤
+│ total data received: 32.01kB (approx)                        │
+├──────────────────────────────────────────────────────────────┤
+│ average response time: 9ms [min: 1ms, max: 61ms, s.d.: 17ms] │
+└──────────────────────────────────────────────────────────────┘

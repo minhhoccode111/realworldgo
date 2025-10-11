@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/minhhoccode111/realworldgo/internal/middleware"
+	"golang.org/x/sync/errgroup"
 
 	// no need for prefix 'model.' and 'utils.'
 	. "github.com/minhhoccode111/realworldgo/internal/model"
@@ -299,7 +300,7 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 		currentUserId = currentUser.Id
 	}
 
-	tag, author, favorited, limit, offset := SearchQueries(w, r)
+	tag, author, favorited, limit, offset := SearchQueries(r)
 
 	articles, articlesCount, err := s.db.SelectArticles(
 		r.Context(),
@@ -331,7 +332,7 @@ func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _, _, limit, offset := SearchQueries(w, r)
+	_, _, _, limit, offset := SearchQueries(r)
 
 	articles, articlesCount, err := s.db.SelectArticlesFeed(
 		r.Context(),
@@ -575,7 +576,7 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 		currentUserId = currentUser.Id
 	}
 
-	_, _, _, limit, offset := SearchQueries(w, r)
+	_, _, _, limit, offset := SearchQueries(r)
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
@@ -702,37 +703,50 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
-	followingUsername, ok := vars["username"]
-	if !ok {
+	followingUsername := vars["username"]
+	if followingUsername == "" {
 		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "username is required"})
 		return
 	}
 
-	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
-	if errors.Is(err, sql.ErrNoRows) {
-		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
-		return
+	var (
+		followingUser *User
+		following     bool
+	)
+
+	g, ctx := errgroup.WithContext(r.Context())
+
+	g.Go(func() error {
+		var err error
+		followingUser, err = s.db.SelectUser(ctx, "", "", followingUsername)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if isAuth {
+		g.Go(func() error {
+			var err error
+			following, err = s.db.IsFollowing(ctx, currentUser.Id, followingUsername)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 	}
-	if err != nil {
-		log.Printf("Error selecting following user: %v", err)
+
+	if err := g.Wait(); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+			return
+		}
+		log.Printf("Error getting profile: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	if isAuth {
-		following, err := s.db.IsFollowing(r.Context(), currentUser.Id, followingUsername)
-		if err != nil {
-			log.Printf("Error checking if following: %v", err)
-			WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-			return
-		}
-
-		profilePreview := followingUser.ToProfilePreview(following)
-		WriteJSON(w, http.StatusOK, ProfilePreviewResponse{Profile: *profilePreview})
-		return
-	}
-
-	profilePreview := followingUser.ToProfilePreview(false)
+	profilePreview := followingUser.ToProfilePreview(following)
 	WriteJSON(w, http.StatusOK, ProfilePreviewResponse{Profile: *profilePreview})
 }
 
@@ -757,20 +771,37 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
-	if errors.Is(err, sql.ErrNoRows) {
-		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
-		return
-	}
-	if err != nil {
-		log.Printf("Error selecting following user: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-		return
-	}
+	var (
+		followingUser *User
+		following     bool
+	)
 
-	following, err := s.db.IsFollowing(r.Context(), currentUser.Id, followingUsername)
-	if err != nil {
-		log.Printf("Error checking if following: %v", err)
+	g, ctx := errgroup.WithContext(r.Context())
+
+	g.Go(func() error {
+		var err error
+		followingUser, err = s.db.SelectUser(ctx, "", "", followingUsername)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		following, err = s.db.IsFollowing(ctx, currentUser.Id, followingUsername)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+			return
+		}
+		log.Printf("Error getting profile: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
@@ -800,20 +831,37 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	followingUser, err := s.db.SelectUser(r.Context(), "", "", followingUsername)
-	if errors.Is(err, sql.ErrNoRows) {
-		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
-		return
-	}
-	if err != nil {
-		log.Printf("Error selecting following user: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-		return
-	}
+	var (
+		followingUser *User
+		following     bool
+	)
 
-	following, err := s.db.IsFollowing(r.Context(), currentUser.Id, followingUsername)
-	if err != nil {
-		log.Printf("Error checking if following: %v", err)
+	g, ctx := errgroup.WithContext(r.Context())
+
+	g.Go(func() error {
+		var err error
+		followingUser, err = s.db.SelectUser(ctx, "", "", followingUsername)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		following, err = s.db.IsFollowing(ctx, currentUser.Id, followingUsername)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+			return
+		}
+		log.Printf("Error getting profile: %v", err)
 		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
@@ -823,7 +871,7 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request) {
-	_, _, _, limit, offset := SearchQueries(w, r)
+	_, _, _, limit, offset := SearchQueries(r)
 
 	tags, tagsCount, err := s.db.SelectTags(r.Context(), limit, offset)
 	if err != nil {

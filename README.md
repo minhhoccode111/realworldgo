@@ -2,7 +2,8 @@
 
 > ### Golang codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
 
-For more information on how to this works with other frontends/backends, head over to the [RealWorld](https://github.com/gothinkster/realworld) repo.
+For more information on how to this works with other frontends/backends, head
+over to the [RealWorld](https://github.com/gothinkster/realworld) repo.
 
 ## [Endpoints](https://docs.realworld.show/specifications/backend/endpoints/)
 
@@ -94,9 +95,11 @@ idx    - name      - unique
 ## Concepts Learned
 
 - A project file structure that I like :)
+- Concurrency with `errgroup`
 - Transaction, Rollback (with `defer`), Commit
 - Batch Insert to improve performance
-- `values := []any{}` must be `[]any` to be used as `values...` in `db.QueryContext`
+- `values := []any{}` must be `[]any` to be used as `values...` in
+  `db.QueryContext`
 - `QueryRowContext` returns a single row
 - `QueryContext` returns multiple rows, which we have to `.Close()` manually
 - `LEFT JOIN`
@@ -111,10 +114,11 @@ idx    - name      - unique
 - `var tags pq.StringArray` represents a one-dimensional array of the PostgreSQL
   character types, then `[]string(tags)` to get array of strings
 - `COUNT(DISTINCT id)` to count the number of distinct rows
-- `COUNT(*) OVER()` to count all rows that match the `WHERE` before applying `LIMIT` and `OFFSET`
+- `COUNT(*) OVER()` to count all rows that match the `WHERE` before applying
+  `LIMIT` and `OFFSET`
 - `WHERE ('' = $1 OR username = $1)` skip if empty
-- `ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name` if insert (or update) conflict
-  update the old value to new value (same)
+- `ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name` if insert (or update)
+  conflict update the old value to new value (same)
 - `ON CONFLICT DO NOTHING`
 
 ## Todo
@@ -182,3 +186,8 @@ make clean
 ```
 
 ## Contributing
+
+Contributions are **welcome and highly appreciated**!\
+This project follows the [RealWorld API
+spec](https://github.com/gothinkster/realworld) — please make sure your changes
+remain compliant.

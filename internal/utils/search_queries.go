@@ -7,10 +7,7 @@ import (
 )
 
 // TODO: tag can be a slice of strings
-func SearchQueries(
-	w http.ResponseWriter,
-	r *http.Request,
-) (tag, author, favorited string, limit, offset int) {
+func SearchQueries(r *http.Request) (tag, author, favorited string, limit, offset int) {
 	var err error
 	tag = strings.TrimSpace(r.URL.Query().Get("tag"))
 	author = strings.TrimSpace(r.URL.Query().Get("author"))
