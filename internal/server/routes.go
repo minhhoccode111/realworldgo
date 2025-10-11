@@ -124,10 +124,6 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// WARN: don't check for uniqueness manually, because race conditions can occur
-	// we must check for uniqueness if error returned after we insert to db
-	// userExisted, err := s.db.SelectUserByEmail(r.Context(), body.User.Email)
-
 	newUser := User{
 		Email:    body.User.Email,
 		Username: body.User.Username,

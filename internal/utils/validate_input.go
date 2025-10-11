@@ -13,7 +13,7 @@ func IsValidUsername(username string) (string, error) {
 	if username == "" {
 		return "", fmt.Errorf("username cannot be empty")
 	}
-	re := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 	if !re.MatchString(username) {
 		return "", fmt.Errorf("username must contain only letters and numbers (a-z, A-Z, 0-9)")
 	}
