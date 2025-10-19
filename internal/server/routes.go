@@ -114,14 +114,14 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var body UserRegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, NewError(err))
 		return
 	}
 
 	err := body.User.Validate()
 	if err != nil {
 		log.Printf("UserRegisterRequest model failed validations: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -135,20 +135,20 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok {
 			if pgErr.Code == "23505" {
-				WriteJSON(w, http.StatusConflict, ErrorResponse{Error: err.Error()})
+				WriteJSON(w, http.StatusConflict, NewError(err))
 				return
 			}
 		}
 
 		log.Printf("Error inserting user: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
 	token, err := GenerateJWT(s.config.JWT, newUser.Id)
 	if err != nil {
 		log.Printf("Error generating jwt: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -160,29 +160,29 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var body UserLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, NewError(err))
 		return
 	}
 
 	userExisted, err := s.db.SelectUser(r.Context(), "", body.User.Email, "")
 	if err != nil {
 		if err == sql.ErrNoRows {
-			WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "email not found"})
+			WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("email not found")))
 			return
 		}
 		log.Printf("Error selecting user: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 	if !ValidatePassword(userExisted.Password, body.User.Password) {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "password incorrect"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("password incorrect")))
 		return
 	}
 
 	token, err := GenerateJWT(s.config.JWT, userExisted.Id)
 	if err != nil {
 		log.Printf("Error generating jwt: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -193,13 +193,13 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 	token, err := GenerateJWT(s.config.JWT, user.Id)
 	if err != nil {
 		log.Printf("Error generating jwt: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -212,27 +212,27 @@ func (s *Server) PutUserHandler(w http.ResponseWriter, r *http.Request) {
 	var body UserUpdateRequest
 	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, NewError(err))
 		return
 	}
 
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	err = currentUser.ValidateUserUpdate(&body.User)
 	if err != nil {
 		log.Printf("Error validating user update request: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
 	err = s.db.UpdateUser(r.Context(), &currentUser)
 	if err != nil {
 		log.Printf("Error updating user: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -246,20 +246,20 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 	var body ArticleCreateRequest
 	if err = json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("Error decode request body: %v", err)
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, NewError(err))
 		return
 	}
 
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	err = body.Article.Validate()
 	if err != nil {
 		log.Printf("Error validating article create request: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -273,14 +273,14 @@ func (s *Server) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 	newSlug, err := s.db.CreateArticle(r.Context(), &newArticle, body.Article.TagList)
 	if err != nil {
 		log.Printf("Error creating article: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
 	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, newSlug)
 	if err != nil {
 		log.Printf("Error selecting new article details: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -291,7 +291,7 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok && isAuth {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
@@ -313,7 +313,7 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		log.Printf("Error selecting articles: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -328,7 +328,7 @@ func (s *Server) GetAllArticlesHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
@@ -342,7 +342,7 @@ func (s *Server) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		log.Printf("Error selecting feeed articles: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -358,14 +358,14 @@ func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok && isAuth {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
@@ -380,12 +380,12 @@ func (s *Server) GetArticleHandler(w http.ResponseWriter, r *http.Request) {
 		slug,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "Article not found"})
+		WriteJSON(w, http.StatusNotFound, NewError(errors.New("Article not found")))
 		return
 	}
 	if err != nil {
 		log.Printf("Error selecting article: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -401,20 +401,20 @@ func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		log.Printf("Error decode request body: %v", err)
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, NewError(err))
 		return
 	}
 
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
@@ -423,19 +423,19 @@ func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request) {
 		slug,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "Article not found"})
+		WriteJSON(w, http.StatusNotFound, NewError(errors.New("Article not found")))
 		return
 	}
 	if err != nil {
 		log.Printf("Error selecting article: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
 	// authz
 	if article.AuthorId != currentUser.Id {
 		WriteJSON(w, http.StatusForbidden,
-			ErrorResponse{Error: "Only article author can update it"},
+			NewError(errors.New("Only article author can update it")),
 		)
 		return
 	}
@@ -443,19 +443,19 @@ func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request) {
 	// input validation and sanitization
 	err = article.ValidateArticleUpdate(&body.Article)
 	if err != nil {
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
 	newSlug, err := s.db.UpdateArticle(r.Context(), article)
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
 	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, newSlug)
 	if err != nil {
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -465,21 +465,21 @@ func (s *Server) PutArticleHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
 	err := s.db.DeleteArticle(r.Context(), currentUser.Id, slug)
 	if err != nil {
 		log.Printf("Error deleting article: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -489,14 +489,14 @@ func (s *Server) DeleteArticleHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
@@ -506,7 +506,7 @@ func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 		if !errors.As(err, &pgErr) {
 			log.Printf("Error creating favorite: %v", err)
 			WriteJSON(w, http.StatusInternalServerError,
-				ErrorResponse{Error: err.Error()},
+				NewError(err),
 			)
 			return
 		}
@@ -514,7 +514,7 @@ func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 		if pgErr.Code != "23505" {
 			log.Printf("Error creating favorite: %v", err)
 			WriteJSON(w, http.StatusInternalServerError,
-				ErrorResponse{Error: err.Error()},
+				NewError(err),
 			)
 			return
 		}
@@ -525,7 +525,7 @@ func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, slug)
 	if err != nil {
 		log.Printf("Error selecting article detail: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -535,28 +535,28 @@ func (s *Server) PostFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteFavoriteHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
 	err := s.db.DeleteFavorite(r.Context(), currentUser.Id, slug)
 	if err != nil {
 		log.Printf("Error creating favorite: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
 	articleDetail, err := s.db.SelectArticleDetail(r.Context(), currentUser.Id, slug)
 	if err != nil {
 		log.Printf("Error selecting article detail: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -567,7 +567,7 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok && isAuth {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
@@ -581,7 +581,7 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
@@ -594,7 +594,7 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		log.Printf("Error selecting comments: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -610,14 +610,14 @@ func (s *Server) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 
@@ -625,13 +625,13 @@ func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		log.Printf("Error decode request body: %v", err)
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusBadRequest, NewError(err))
 		return
 	}
 
 	err = body.Comment.Validate()
 	if err != nil {
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -641,20 +641,20 @@ func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23502" { // not null constraint violation
 				WriteJSON(w, http.StatusUnprocessableEntity,
-					ErrorResponse{Error: "Article not found or invalid slug"},
+					NewError(errors.New("Article not found or invalid slug")),
 				)
 				return
 			}
 		}
 		log.Printf("Error inserting comment: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
 	commentDetail, err := s.db.SelectCommentDetail(r.Context(), currentUser.Id, commentId)
 	if err != nil {
 		log.Printf("Error selecting comment detail: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -664,30 +664,30 @@ func (s *Server) PostCommentsHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	slug, ok := vars["slug"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "slug is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("slug is required")))
 		return
 	}
 	commentId, ok := vars["commentId"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "commentId is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("commentId is required")))
 		return
 	}
 
 	err := s.db.DeleteComment(r.Context(), currentUser.Id, slug, commentId)
 	if err != nil {
 		if err.Error() == "zero rows affected" {
-			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: err.Error()})
+			WriteJSON(w, http.StatusNotFound, NewError(err))
 			return
 		}
 		log.Printf("Error deleting comment: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -698,14 +698,14 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 	isAuth := r.Context().Value(CtxIsAuthKey).(bool)
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok && isAuth {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	followingUsername := vars["username"]
 	if followingUsername == "" {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "username is required"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("username is required")))
 		return
 	}
 
@@ -738,11 +738,11 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := g.Wait(); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+			WriteJSON(w, http.StatusNotFound, NewError(errors.New("username not found")))
 			return
 		}
 		log.Printf("Error getting profile: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -753,21 +753,21 @@ func (s *Server) GetProfilehandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	followingUsername, ok := vars["username"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "username not found"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("username not found")))
 		return
 	}
 
 	err := s.db.CreateFollow(r.Context(), currentUser.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error creating follow: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -798,11 +798,11 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := g.Wait(); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+			WriteJSON(w, http.StatusNotFound, NewError(errors.New("username not found")))
 			return
 		}
 		log.Printf("Error getting profile: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -813,21 +813,21 @@ func (s *Server) PostFollowHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 	currentUser, ok := r.Context().Value(CtxUserKey).(User)
 	if !ok {
-		WriteJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "cannot authorize user in jwt"})
+		WriteJSON(w, http.StatusUnauthorized, NewError(errors.New("cannot authorize user in jwt")))
 		return
 	}
 
 	vars := mux.Vars(r)
 	followingUsername, ok := vars["username"]
 	if !ok {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "username not found"})
+		WriteJSON(w, http.StatusBadRequest, NewError(errors.New("username not found")))
 		return
 	}
 
 	err := s.db.DeleteFollow(r.Context(), currentUser.Id, followingUsername)
 	if err != nil {
 		log.Printf("Error deleting follow: %v", err)
-		WriteJSON(w, http.StatusUnprocessableEntity, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusUnprocessableEntity, NewError(err))
 		return
 	}
 
@@ -858,11 +858,11 @@ func (s *Server) DeleteFollowHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := g.Wait(); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			WriteJSON(w, http.StatusNotFound, ErrorResponse{Error: "username not found"})
+			WriteJSON(w, http.StatusNotFound, NewError(errors.New("username not found")))
 			return
 		}
 		log.Printf("Error getting profile: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 
@@ -876,7 +876,7 @@ func (s *Server) GetTagsHandler(w http.ResponseWriter, r *http.Request) {
 	tags, tagsCount, err := s.db.SelectTags(r.Context(), limit, offset)
 	if err != nil {
 		log.Printf("Error selecting tags: %v", err)
-		WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		WriteJSON(w, http.StatusInternalServerError, NewError(err))
 		return
 	}
 

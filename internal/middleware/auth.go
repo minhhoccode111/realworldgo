@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,7 +36,7 @@ func AuthMiddleware(
 				WriteJSON(
 					w,
 					http.StatusUnauthorized,
-					model.ErrorResponse{Error: "no authorization header"},
+					model.NewError(errors.New("no authorization header")),
 				)
 				return
 			}
@@ -47,7 +48,7 @@ func AuthMiddleware(
 					return
 				}
 				WriteJSON(w, http.StatusUnauthorized,
-					model.ErrorResponse{Error: "authorization header must start with 'Token'"},
+					model.NewError(errors.New("authorization header must start with 'Token'")),
 				)
 				return
 			}
@@ -56,12 +57,10 @@ func AuthMiddleware(
 					hf(w, r.WithContext(ctx))
 					return
 				}
-				WriteJSON(
-					w,
-					http.StatusUnauthorized,
-					model.ErrorResponse{
-						Error: "authorization header must be formatted as 'Token <token>'",
-					},
+				WriteJSON(w, http.StatusUnauthorized,
+					model.NewError(
+						errors.New("authorization header must be formatted as 'Token <token>'"),
+					),
 				)
 				return
 			}
@@ -79,7 +78,7 @@ func AuthMiddleware(
 					return
 				}
 				log.Printf("Error parsing token: %v", err)
-				WriteJSON(w, http.StatusUnauthorized, model.ErrorResponse{Error: err.Error()})
+				WriteJSON(w, http.StatusUnauthorized, model.NewError(err))
 				return
 			}
 
@@ -89,7 +88,7 @@ func AuthMiddleware(
 					hf(w, r.WithContext(ctx))
 					return
 				}
-				WriteJSON(w, http.StatusUnauthorized, model.ErrorResponse{Error: "invalid token"})
+				WriteJSON(w, http.StatusUnauthorized, model.NewError(errors.New("invalid token")))
 				return
 			}
 
@@ -102,7 +101,7 @@ func AuthMiddleware(
 				WriteJSON(
 					w,
 					http.StatusUnauthorized,
-					model.ErrorResponse{Error: "missing userId in token"},
+					model.NewError(errors.New("missing userId in token")),
 				)
 				return
 			}
@@ -115,7 +114,7 @@ func AuthMiddleware(
 					return
 				}
 				log.Printf("Error selecting user by id: %v", err)
-				WriteJSON(w, http.StatusUnauthorized, model.ErrorResponse{Error: err.Error()})
+				WriteJSON(w, http.StatusUnauthorized, model.NewError(err))
 				return
 			}
 

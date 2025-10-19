@@ -1,13 +1,30 @@
 package model
 
-type ErrorResponse struct {
-	Error   string `json:"error"`
-	Details string `json:"details,omitempty"`
-	Code    int    `json:"code,omitempty"`
+import "strings"
+
+type ResponseError struct {
+	Errors  []string `json:"error"`
+	Details string   `json:"details,omitempty"`
+	Code    int      `json:"code,omitempty"`
 }
 
-func NewError(err error) ErrorResponse {
-	return ErrorResponse{Error: err.Error()}
+func (re ResponseError) Error() string {
+	switch {
+	case len(re.Errors) == 0:
+		return "unknown error"
+	case len(re.Errors) == 1:
+		return re.Errors[0]
+	default:
+		return strings.Join(re.Errors, "; ")
+	}
+}
+
+func NewError(err ...error) ResponseError {
+	errors := []string{}
+	for _, v := range err {
+		errors = append(errors, v.Error())
+	}
+	return ResponseError{Errors: errors}
 }
 
 type UserAuthResponse struct {
