@@ -9,16 +9,19 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/minhhoccode111/realworldgo/internal/database"
 	"github.com/minhhoccode111/realworldgo/internal/model"
 	. "github.com/minhhoccode111/realworldgo/internal/utils"
 )
+
+type userLookup interface {
+	SelectUser(ctx context.Context, id, email, username string) (*model.User, error)
+}
 
 // Authentication middleware
 func AuthMiddleware(
 	isOptional bool,
 	jwtSecret string,
-	db database.Service,
+	db userLookup,
 ) func(http.HandlerFunc) http.HandlerFunc {
 	return func(hf http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

@@ -125,7 +125,7 @@ idx    - name      - unique
 
 - [ ] Tag can be a slice of strings
 - [ ] Allow update article's tags
-- [ ] Add tests with standard `testing` package
+- [x] Add tests with standard `testing` package
 - [ ] Add cache with Redis
 - [ ] Add notifications with SSE + RabbitMQ + Redis Pub/Sub Architecture
 
@@ -192,6 +192,13 @@ Run the [test script](./api-test/run-api-tests.sh)
 ```bash
 ./api-test/run-api-tests.sh
 ```
+
+## Testing Strategy
+
+- Unit tests rely solely on the Go standard `testing` package and live under the `internal` tree (config, utils, middleware). They cover configuration loading, HTTP helpers, validation logic, JWT generation, and security middleware flows.
+- Run the full suite locally with `go test ./...` or `make test`. The commands set no external dependencies, so they execute quickly without Postgres.
+- When adding new packages, co-locate `_test.go` files beside the implementation and follow the same table-driven style used in `internal/utils/validate_input_test.go` for clarity.
+- Tests that depend on environment variables should use `t.Setenv` to stay hermetic. Middleware tests prefer small stubs (see `internal/middleware/auth_test.go`) instead of third-party mocks.
 
 Will produce an [output](./api-test/out) like this:
 
